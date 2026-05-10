@@ -27,3 +27,16 @@ doc/api/
 
 .flutter-plugins
 .flutter-plugins-dependencies
+
+# Android build and other unnecessary files
+android/.gradle/
+android/build/
+android/app/build/
+android/key.properties
+android/local.properties
+*.keystore
+*.jks
+
+# Desain Mobile
+Desain_Mobile/
+Desain_Mobile
