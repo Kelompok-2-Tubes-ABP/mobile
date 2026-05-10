@@ -85,10 +85,10 @@ class FinanceProvider with ChangeNotifier {
   List<Budget> get budgets => [..._budgets];
 
   final List<Investment> _investments = [
-    Investment(id: 'i1', name: 'Bitcoin', symbol: 'BTC', type: 'crypto', amount: 15500000, profitPercentage: 15.5, icon: Icons.currency_bitcoin, color: Colors.orange),
-    Investment(id: 'i2', name: 'Ethereum', symbol: 'ETH', type: 'crypto', amount: 5150000, profitPercentage: 8.2, icon: Icons.currency_exchange, color: Colors.blueAccent),
-    Investment(id: 'i3', name: 'Bank Central Asia', symbol: 'BBCA', type: 'saham', amount: 10000000, profitPercentage: 5.4, icon: Icons.account_balance, color: Colors.blue),
-    Investment(id: 'i4', name: 'Telkom Indonesia', symbol: 'TLKM', type: 'saham', amount: 5000000, profitPercentage: -2.1, icon: Icons.cell_tower, color: Colors.redAccent),
+    Investment(id: 'i1', name: 'Bitcoin', symbol: 'BTC', type: 'crypto', amount: 18000000, profitPercentage: 15.0, icon: Icons.currency_bitcoin, color: Colors.orange, platform: 'Binance', holdings: 0.15, avgCost: 110000000, currentPrice: 120000000),
+    Investment(id: 'i2', name: 'Ethereum', symbol: 'ETH', type: 'crypto', amount: 5150000, profitPercentage: 8.2, icon: Icons.currency_exchange, color: Colors.blueAccent, platform: 'Indodax', holdings: 1.2, avgCost: 35000000, currentPrice: 40000000),
+    Investment(id: 'i3', name: 'Bank Central Asia', symbol: 'BBCA', type: 'saham', amount: 10000000, profitPercentage: 5.4, icon: Icons.account_balance, color: Colors.blue, platform: 'Ajaib', holdings: 1000, avgCost: 9000, currentPrice: 9500),
+    Investment(id: 'i4', name: 'Telkom Indonesia', symbol: 'TLKM', type: 'saham', amount: 5000000, profitPercentage: -2.1, icon: Icons.cell_tower, color: Colors.redAccent, platform: 'Ajaib', holdings: 1500, avgCost: 3500, currentPrice: 3300),
   ];
 
   List<Investment> get investments => [..._investments];
@@ -124,6 +124,11 @@ class FinanceProvider with ChangeNotifier {
 
   void addBudget(Budget budget) {
     _budgets.add(budget);
+    notifyListeners();
+  }
+
+  void addInvestment(Investment investment) {
+    _investments.add(investment);
     notifyListeners();
   }
 }

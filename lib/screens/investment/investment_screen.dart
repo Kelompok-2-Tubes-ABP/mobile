@@ -5,6 +5,7 @@ import '../../core/utils.dart';
 import '../../providers/finance_provider.dart';
 import '../../models/investment.dart';
 import '../../widgets/app_drawer.dart';
+import 'add_investment_modal.dart';
 
 class InvestmentScreen extends StatefulWidget {
   const InvestmentScreen({super.key});
@@ -130,8 +131,12 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        // Modal to add investment (placeholder or implement simple one)
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Fitur tambah investasi belum tersedia.')));
+                        showModalBottomSheet(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
+                          builder: (context) => const AddInvestmentModal(),
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryColor,
@@ -220,65 +225,111 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
 
   Widget _buildAssetCard(Investment item) {
     bool isPositive = item.profitPercentage >= 0;
+    double profitAmount = item.amount - (item.amount / (1 + (item.profitPercentage / 100)));
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.grey.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: item.color.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(item.icon, color: item.color),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 4),
-                Text(item.symbol, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          // Header Row
+          Row(
             children: [
-              Text(
-                CurrencyFormat.convertToIdr(item.amount),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: item.color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(item.icon, color: item.color, size: 20),
               ),
-              const SizedBox(height: 4),
-              Row(
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(item.symbol, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(item.platform, style: TextStyle(color: Colors.grey.shade600, fontSize: 10, fontWeight: FontWeight.bold)),
+                        ),
+                        const SizedBox(width: 8),
+                        const Icon(Icons.circle, color: AppTheme.success, size: 8),
+                        const SizedBox(width: 4),
+                        const Text('LIVE', style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(item.name, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Icon(
-                    isPositive ? Icons.trending_up : Icons.trending_down,
-                    color: isPositive ? AppTheme.success : AppTheme.danger,
-                    size: 14,
+                  Text(
+                    '${isPositive ? '+' : ''}${CurrencyFormat.convertToIdr(profitAmount)}',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: isPositive ? AppTheme.success : AppTheme.danger, fontSize: 14),
                   ),
-                  const SizedBox(width: 4),
                   Text(
                     '${isPositive ? '+' : ''}${item.profitPercentage.toStringAsFixed(2)}%',
-                    style: TextStyle(
-                      color: isPositive ? AppTheme.success : AppTheme.danger,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(color: isPositive ? AppTheme.success : AppTheme.danger, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
             ],
           ),
+          const SizedBox(height: 20),
+          const Divider(height: 1, color: Color(0xFFF3F4F6)),
+          const SizedBox(height: 16),
+          
+          // Details Rows
+          _buildDetailRow('Holdings', '${item.holdings} ${item.symbol}'),
+          const SizedBox(height: 12),
+          _buildDetailRow('Value', CurrencyFormat.convertToIdr(item.amount)),
+          const SizedBox(height: 12),
+          _buildDetailRow('Avg Cost', CurrencyFormat.convertToIdr(item.avgCost)),
+          const SizedBox(height: 12),
+          _buildDetailRow('Current', CurrencyFormat.convertToIdr(item.currentPrice), isPrice: true),
         ],
       ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, {bool isPrice = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+        Row(
+          children: [
+            Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppTheme.textPrimary)),
+            if (isPrice) ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.trending_up, color: AppTheme.success, size: 16),
+            ]
+          ],
+        ),
+      ],
     );
   }
 }
