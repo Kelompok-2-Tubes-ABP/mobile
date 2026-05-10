@@ -16,6 +16,9 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
   final TextEditingController _symbolController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _profitController = TextEditingController();
+  final TextEditingController _avgCostController = TextEditingController();
+  final TextEditingController _currentPriceController = TextEditingController();
+  final TextEditingController _platformController = TextEditingController();
   String selectedType = 'saham'; // Default type
 
   @override
@@ -109,6 +112,41 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
             ),
             const SizedBox(height: 20),
 
+            // Avg Cost Input
+            const Text('Harga Beli Rata-rata', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _avgCostController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                hintText: 'Rp 0',
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Current Price Input
+            const Text('Harga Saat Ini', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _currentPriceController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                hintText: 'Rp 0',
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Platform / Mata Uang Input
+            const Text('Mata Uang / Platform', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _platformController,
+              decoration: const InputDecoration(
+                hintText: 'Contoh: Binance atau Ajaib',
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // Profit Percentage Input
             const Text('Persentase Keuntungan (%)', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
@@ -189,6 +227,9 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
   void _saveInvestment() {
     final amount = double.tryParse(_amountController.text) ?? 0;
     final profit = double.tryParse(_profitController.text) ?? 0;
+    final avgCost = double.tryParse(_avgCostController.text) ?? 0;
+    final currentPrice = double.tryParse(_currentPriceController.text) ?? 0;
+    
     if (amount <= 0 || _nameController.text.isEmpty || _symbolController.text.isEmpty) return;
 
     final newInvestment = Investment(
@@ -200,6 +241,10 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
       profitPercentage: profit,
       icon: selectedType == 'crypto' ? Icons.currency_bitcoin : Icons.trending_up,
       color: selectedType == 'crypto' ? Colors.orange : Colors.blue,
+      platform: _platformController.text.isEmpty ? 'Binance' : _platformController.text,
+      holdings: amount / (currentPrice > 0 ? currentPrice : 1), // Rough estimate if not provided
+      avgCost: avgCost,
+      currentPrice: currentPrice,
     );
 
     context.read<FinanceProvider>().addInvestment(newInvestment);
