@@ -4,6 +4,7 @@ import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../providers/finance_provider.dart';
 import '../../models/budget.dart';
+import 'add_budget_modal.dart';
 
 class BudgetScreen extends StatelessWidget {
   const BudgetScreen({super.key});
@@ -30,18 +31,39 @@ class BudgetScreen extends StatelessWidget {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text('Budget', style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Budget', style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text('Mei 2026', style: TextStyle(color: AppTheme.textSecondary)),
+                ],
+              ),
               ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => const AddBudgetModal(),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 icon: const Icon(Icons.add, size: 18),
-                label: const Text('Tambah Budget'),
+                label: const Text('Tambah Budget', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Text('Mei 2026', style: TextStyle(color: AppTheme.textSecondary)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
 
           // Monthly Summary Card
           Container(
