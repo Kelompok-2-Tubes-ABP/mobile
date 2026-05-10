@@ -15,20 +15,24 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
   t.TransactionType selectedType = t.TransactionType.pengeluaran;
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  String selectedCategory = 'Lainnya';
+  String selectedCategory = 'Makanan';
 
   final List<Map<String, dynamic>> incomeCategories = [
-    {'name': 'Gaji', 'icon': Icons.trending_up},
-    {'name': 'Bonus', 'icon': Icons.star_border},
-    {'name': 'Investasi', 'icon': Icons.account_balance},
-    {'name': 'Lainnya', 'icon': Icons.category},
+    {'name': 'Gaji', 'icon': Icons.account_balance_wallet, 'color': Colors.green},
+    {'name': 'Bonus', 'icon': Icons.star_border, 'color': Colors.orange},
+    {'name': 'Investasi', 'icon': Icons.trending_up, 'color': Colors.blue},
+    {'name': 'Lainnya', 'icon': Icons.category, 'color': Colors.blueGrey},
   ];
 
   final List<Map<String, dynamic>> expenseCategories = [
-    {'name': 'Makanan', 'icon': Icons.restaurant},
-    {'name': 'Transportasi', 'icon': Icons.directions_car},
-    {'name': 'Belanja', 'icon': Icons.shopping_bag},
-    {'name': 'Tagihan', 'icon': Icons.receipt},
+    {'name': 'Makanan', 'icon': Icons.restaurant, 'color': Colors.orange},
+    {'name': 'Transportasi', 'icon': Icons.directions_car, 'color': Colors.indigo},
+    {'name': 'Belanja', 'icon': Icons.shopping_bag, 'color': Colors.red},
+    {'name': 'Tagihan', 'icon': Icons.home, 'color': Colors.deepOrange},
+    {'name': 'Kesehatan', 'icon': Icons.favorite_border, 'color': Colors.teal},
+    {'name': 'Hiburan', 'icon': Icons.sports_esports, 'color': Colors.deepPurple},
+    {'name': 'Investasi', 'icon': Icons.trending_up, 'color': Colors.green},
+    {'name': 'Lainnya', 'icon': Icons.phone_android, 'color': Colors.blueGrey},
   ];
 
   @override
@@ -78,17 +82,28 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
             
             // Amount Input
             const Text('Jumlah', style: TextStyle(color: AppTheme.textSecondary)),
-            TextField(
-              controller: _amountController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
-                prefixText: 'Rp ',
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                fillColor: Colors.transparent,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                const Text('Rp ', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                Expanded(
+                  child: TextField(
+                    controller: _amountController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    decoration: const InputDecoration(
+                      hintText: '0',
+                      hintStyle: TextStyle(color: Colors.grey),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      fillColor: Colors.transparent,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 24),
 
@@ -119,43 +134,50 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
             // Category Selection
             const Text('Kategori', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 100,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: categories.length,
-                itemBuilder: (context, index) {
-                  final cat = categories[index];
-                  bool isSelected = selectedCategory == cat['name'];
-                  return GestureDetector(
-                    onTap: () => setState(() => selectedCategory = cat['name']),
-                    child: Container(
-                      width: 80,
-                      margin: const EdgeInsets.only(right: 12),
-                      decoration: BoxDecoration(
-                        color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: isSelected ? AppTheme.primaryColor : Colors.transparent),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(cat['icon'], color: isSelected ? AppTheme.primaryColor : Colors.grey),
-                          const SizedBox(height: 8),
-                          Text(
-                            cat['name'],
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: isSelected ? AppTheme.primaryColor : Colors.grey,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal
-                            ),
-                          ),
-                        ],
-                      ),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: categories.map((cat) {
+                bool isSelected = selectedCategory == cat['name'];
+                Color catColor = cat['color'];
+                return GestureDetector(
+                  onTap: () => setState(() => selectedCategory = cat['name']),
+                  child: Container(
+                    width: (MediaQuery.of(context).size.width - 48 - 36) / 4, // 4 items per row, 48 padding, 36 spacing
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isSelected ? catColor.withOpacity(0.2) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: isSelected ? catColor : Colors.transparent, width: 1.5),
                     ),
-                  );
-                },
-              ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: catColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(cat['icon'], color: catColor, size: 24),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          cat['name'],
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isSelected ? catColor : Colors.grey.shade600,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
             ),
             const SizedBox(height: 24),
 
@@ -187,7 +209,12 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
   Widget _buildTypeButton(String label, t.TransactionType type, Color color, IconData icon) {
     bool isSelected = selectedType == type;
     return GestureDetector(
-      onTap: () => setState(() => selectedType = type),
+      onTap: () {
+        setState(() {
+          selectedType = type;
+          selectedCategory = type == t.TransactionType.pemasukan ? 'Gaji' : 'Makanan';
+        });
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(

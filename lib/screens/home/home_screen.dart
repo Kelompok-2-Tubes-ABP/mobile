@@ -8,7 +8,9 @@ import '../../models/transaction.dart' as t;
 import '../../models/budget.dart';
 
 class HomeScreen extends StatelessWidget {
-  HomeScreen({super.key});
+  final Function(int)? onNavigate;
+
+  HomeScreen({super.key, this.onNavigate});
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -77,13 +79,13 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 20),
-            // Menus
-            _buildDrawerItem(context, Icons.dashboard_customize, 'Dashboard', isSelected: true),
-            _buildDrawerItem(context, Icons.account_balance_wallet_outlined, 'Transaksi'),
-            _buildDrawerItem(context, Icons.show_chart, 'Budget'),
-            _buildDrawerItem(context, Icons.track_changes, 'Tabungan'),
-            _buildDrawerItem(context, Icons.chat_bubble_outline, 'AI Chatbot'),
-            _buildDrawerItem(context, Icons.settings_outlined, 'Pengaturan'),
+            // Menus linked to navigation
+            _buildDrawerItem(context, Icons.dashboard_customize, 'Dashboard', index: 0, isSelected: true),
+            _buildDrawerItem(context, Icons.account_balance_wallet_outlined, 'Transaksi', index: 1),
+            _buildDrawerItem(context, Icons.show_chart, 'Budget', index: 2),
+            _buildDrawerItem(context, Icons.track_changes, 'Tabungan', index: 3), // Investasi mapped to Tabungan
+            _buildDrawerItem(context, Icons.chat_bubble_outline, 'AI Chatbot', index: null),
+            _buildDrawerItem(context, Icons.settings_outlined, 'Pengaturan', index: 4), // Mapped to Profil
           ],
         ),
       ),
@@ -93,7 +95,7 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
+              // Header & Total Saldo
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -236,21 +238,40 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // Action Buttons
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    _buildActionButton(Icons.add, 'Transaksi'),
-                    const SizedBox(width: 16),
-                    _buildActionButton(Icons.track_changes, 'Goals'),
-                    const SizedBox(width: 16),
-                    _buildActionButton(Icons.bar_chart, 'Budget'),
-                    const SizedBox(width: 16),
-                    _buildActionButton(Icons.trending_up, 'Investasi'),
-                  ],
-                ),
+              // Action Buttons (Full width, rounded square, aligned horizontally)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildActionButton(Icons.add, 'Transaksi', () {
+                    if (onNavigate != null) onNavigate!(1);
+                  }),
+                  _buildActionButton(Icons.track_changes, 'Goals', () {
+                    if (onNavigate != null) onNavigate!(3);
+                  }),
+                  _buildActionButton(Icons.bar_chart, 'Budget', () {
+                    if (onNavigate != null) onNavigate!(2);
+                  }),
+                  _buildActionButton(Icons.trending_up, 'Investasi', () {
+                    if (onNavigate != null) onNavigate!(3);
+                  }),
+                ],
               ),
+              const SizedBox(height: 24),
+
+              // Budget Bulan Ini
+              _buildBudgetSection(financeData),
+              const SizedBox(height: 24),
+
+              // Target Tabungan
+              _buildSavingsTargetSection(),
+              const SizedBox(height: 24),
+
+              // Pengeluaran Terbesar
+              _buildBiggestExpenseSection(financeData),
+              const SizedBox(height: 24),
+
+              // Portofolio Investasi
+              _buildInvestmentPortfolioSection(),
               const SizedBox(height: 24),
 
               // Recent Transactions
@@ -259,27 +280,20 @@ class HomeScreen extends StatelessWidget {
                 children: [
                   Text('Transaksi Terakhir', style: Theme.of(context).textTheme.titleMedium),
                   TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      if (onNavigate != null) onNavigate!(1);
+                    },
                     child: const Text('Lihat Semua'),
                   )
                 ],
               ),
               const SizedBox(height: 8),
-              
               ...financeData.transactions.take(3).map((tx) => _buildTransactionItem(context, tx)).toList(),
 
               const SizedBox(height: 24),
-              _buildBudgetSection(financeData),
-              const SizedBox(height: 24),
-              _buildSavingsTargetSection(),
-              const SizedBox(height: 24),
-              _buildBiggestExpenseSection(financeData),
-              const SizedBox(height: 24),
-              _buildInvestmentPortfolioSection(),
-              const SizedBox(height: 32),
+              // Tanya AI Button
               _buildAITalkButton(),
               const SizedBox(height: 80), // Padding for FAB
-
             ],
           ),
         ),
@@ -294,7 +308,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDrawerItem(BuildContext context, IconData icon, String title, {bool isSelected = false}) {
+  Widget _buildDrawerItem(BuildContext context, IconData icon, String title, {int? index, bool isSelected = false}) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
@@ -312,49 +326,124 @@ class HomeScreen extends StatelessWidget {
         ),
         onTap: () {
           Navigator.pop(context);
+          if (index != null && onNavigate != null) {
+            onNavigate!(index);
+          } else if (index == null) {
+            // Chatbot screen
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Halaman AI Chatbot belum tersedia.')));
+          }
         },
       ),
     );
   }
 
+  Widget _buildActionButton(IconData icon, String label, VoidCallback onTap) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          children: [
+            AspectRatio(
+              aspectRatio: 1,
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.grey.shade100, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(icon, color: AppTheme.primaryColor, size: 28),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.textSecondary),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBudgetSection(FinanceProvider financeData) {
+    // Combine all budgets to create a "Total Monthly Budget" overview
+    double totalLimit = financeData.budgets.fold(0, (sum, item) => sum + item.limit);
+    double totalSpent = financeData.budgets.fold(0, (sum, item) => sum + item.spent);
+    double percentage = totalLimit > 0 ? (totalSpent / totalLimit) : 0;
+    bool isSafe = percentage <= 0.5;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Budget Bulan Ini', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: financeData.budgets.take(3).map((budget) {
-              return Container(
-                width: 160,
-                margin: const EdgeInsets.only(right: 16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.shade100),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(budget.category, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    LinearProgressIndicator(
-                      value: budget.percentage,
-                      backgroundColor: Colors.grey.shade200,
-                      color: budget.percentage >= 1.0 ? AppTheme.danger : AppTheme.primaryColor,
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade100),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Mei 2026', style: TextStyle(color: AppTheme.textSecondary)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isSafe ? AppTheme.success.withOpacity(0.1) : AppTheme.warning.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${CurrencyFormat.convertToIdr(budget.spent)} / ${CurrencyFormat.convertToIdr(budget.limit)}',
-                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    child: Text(
+                      isSafe ? 'Pengeluaranmu masih aman' : 'Mendekati batas',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: isSafe ? AppTheme.success : AppTheme.warning,
+                      ),
                     ),
-                  ],
-                ),
-              );
-            }).toList(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              LinearProgressIndicator(
+                value: percentage,
+                minHeight: 8,
+                backgroundColor: Colors.grey.shade200,
+                color: isSafe ? AppTheme.primaryColor : AppTheme.warning,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    CurrencyFormat.convertToIdr(totalSpent),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  Text(
+                    'dari ${CurrencyFormat.convertToIdr(totalLimit)}',
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ],
@@ -374,32 +463,43 @@ class HomeScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.grey.shade100),
           ),
-          child: Row(
+          child: Column(
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.directions_car, color: Colors.blue),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Beli Mobil Baru', style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text('Terkumpul Rp 50.000.000 dari Rp 200.000.000', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                    const SizedBox(height: 8),
-                    LinearProgressIndicator(
-                      value: 0.25,
-                      backgroundColor: Colors.grey.shade200,
-                      color: Colors.blue,
-                    ),
-                  ],
-                ),
+              _buildSavingsItem(Icons.directions_car, Colors.blue, 'Beli Mobil Baru', 50000000, 200000000),
+              const Divider(height: 24, thickness: 1, color: Color(0xFFF3F4F6)),
+              _buildSavingsItem(Icons.laptop_mac, Colors.orange, 'MacBook Pro', 15000000, 30000000),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSavingsItem(IconData icon, Color color, String title, double current, double target) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: color),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text('Terkumpul ${CurrencyFormat.convertToIdr(current)} dari ${CurrencyFormat.convertToIdr(target)}', style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: current / target,
+                backgroundColor: Colors.grey.shade200,
+                color: color,
+                borderRadius: BorderRadius.circular(4),
               ),
             ],
           ),
@@ -409,7 +509,6 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildBiggestExpenseSection(FinanceProvider financeData) {
-    // Find biggest expense
     final expenses = financeData.transactions.where((tx) => tx.type == t.TransactionType.pengeluaran).toList();
     expenses.sort((a, b) => b.amount.compareTo(a.amount));
     final biggestExpense = expenses.isNotEmpty ? expenses.first : null;
@@ -417,15 +516,28 @@ class HomeScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Pengeluaran Terbesar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Pengeluaran Terbesar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.danger.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text('Perhatian', style: TextStyle(color: AppTheme.danger, fontSize: 10, fontWeight: FontWeight.bold)),
+            )
+          ],
+        ),
         const SizedBox(height: 12),
         if (biggestExpense != null)
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.danger.withOpacity(0.05),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.danger.withOpacity(0.2)),
+              border: Border.all(color: AppTheme.danger.withOpacity(0.3), width: 1.5),
             ),
             child: Row(
               children: [
@@ -467,50 +579,75 @@ class HomeScreen extends StatelessWidget {
         const Text('Portofolio Investasi', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.grey.shade100),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Total Investasi', style: TextStyle(color: Colors.grey)),
-                  Text('+12.5%', style: TextStyle(color: AppTheme.success, fontWeight: FontWeight.bold)),
+                  const Text('Total Nilai', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                  Row(
+                    children: [
+                      const Text('Keuntungan', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.success.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text('+12.5%', style: TextStyle(color: AppTheme.success, fontSize: 10, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-              const SizedBox(height: 8),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Rp 15.000.000', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                ],
-              ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 4),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  _buildInvestmentItem('Reksadana', '60%', Colors.blue),
-                  _buildInvestmentItem('Saham', '30%', Colors.orange),
-                  _buildInvestmentItem('Emas', '10%', Colors.amber),
+                  const Text('Rp 25.650.000', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                  const Text('+Rp 3.650.000', style: TextStyle(color: AppTheme.success, fontWeight: FontWeight.w600)),
                 ],
               ),
+              const SizedBox(height: 24),
+              // Bar Chart Mockup
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: List.generate(10, (index) {
+                  // Generate an increasing curve of heights
+                  double height = 20.0 + (index * 4) + (index % 3 * 2);
+                  return Container(
+                    width: 20,
+                    height: height,
+                    decoration: BoxDecoration(
+                      color: AppTheme.success.withOpacity(0.3),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(4),
+                        topRight: Radius.circular(4),
+                      ),
+                    ),
+                  );
+                }),
+              )
             ],
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildInvestmentItem(String label, String percent, Color color) {
-    return Row(
-      children: [
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 4),
-        Text('$label $percent', style: const TextStyle(fontSize: 12)),
       ],
     );
   }
@@ -552,31 +689,6 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildActionButton(IconData icon, String label) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade200),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Icon(icon, color: AppTheme.primaryColor),
-        ),
-        const SizedBox(height: 8),
-        Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-      ],
     );
   }
 
