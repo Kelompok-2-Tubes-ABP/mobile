@@ -4,6 +4,7 @@ import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../providers/finance_provider.dart';
 import '../../models/transaction.dart' as t;
+import '../../widgets/app_drawer.dart';
 import 'add_transaction_modal.dart';
 
 class TransactionScreen extends StatefulWidget {
@@ -26,6 +27,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
     
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
+      drawer: const AppDrawer(currentIndex: 1),
       appBar: AppBar(
         title: const Text('Transaksi'),
         actions: [
@@ -138,10 +140,16 @@ class _TransactionScreenState extends State<TransactionScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddTransaction(context),
-        backgroundColor: AppTheme.primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
+      floatingActionButton: Builder(
+        builder: (context) {
+          return FloatingActionButton(
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+            backgroundColor: AppTheme.primaryColor,
+            child: const Icon(Icons.add, color: Colors.white),
+          );
+        }
       ),
     );
   }
