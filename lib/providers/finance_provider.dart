@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/transaction.dart' as t;
 import '../models/budget.dart';
+import '../models/investment.dart';
 
 class FinanceProvider with ChangeNotifier {
   List<t.Transaction> _transactions = [
@@ -82,6 +83,16 @@ class FinanceProvider with ChangeNotifier {
   }
 
   List<Budget> get budgets => [..._budgets];
+
+  final List<Investment> _investments = [
+    Investment(id: 'i1', name: 'Bitcoin', symbol: 'BTC', type: 'crypto', amount: 15500000, profitPercentage: 15.5, icon: Icons.currency_bitcoin, color: Colors.orange),
+    Investment(id: 'i2', name: 'Ethereum', symbol: 'ETH', type: 'crypto', amount: 5150000, profitPercentage: 8.2, icon: Icons.currency_exchange, color: Colors.blueAccent),
+    Investment(id: 'i3', name: 'Bank Central Asia', symbol: 'BBCA', type: 'saham', amount: 10000000, profitPercentage: 5.4, icon: Icons.account_balance, color: Colors.blue),
+    Investment(id: 'i4', name: 'Telkom Indonesia', symbol: 'TLKM', type: 'saham', amount: 5000000, profitPercentage: -2.1, icon: Icons.cell_tower, color: Colors.redAccent),
+  ];
+
+  List<Investment> get investments => [..._investments];
+  double get totalInvestment => _investments.fold(0.0, (sum, item) => sum + item.amount);
 
   double get totalPemasukan {
     return _transactions

@@ -6,6 +6,7 @@ import '../../providers/finance_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/transaction.dart' as t;
 import '../../models/budget.dart';
+import '../../widgets/app_drawer.dart';
 
 class HomeScreen extends StatelessWidget {
   final Function(int)? onNavigate;
@@ -23,72 +24,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppTheme.backgroundColor,
-      drawer: Drawer(
-        backgroundColor: Colors.white,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            topRight: Radius.circular(20),
-            bottomRight: Radius.circular(20),
-          ),
-        ),
-        child: Column(
-          children: [
-            // Drawer Header (FinanceApp with close button)
-            Padding(
-              padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'FinanceApp',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppTheme.primaryColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            // User Card
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryLight.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: AppTheme.primaryColor,
-                    child: Text(user?.name.substring(0, 1).toUpperCase() ?? 'O', style: const TextStyle(color: Colors.white)),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(user?.name ?? 'Orcas', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Text(CurrencyFormat.convertToIdr(financeData.totalSaldo), style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Menus linked to navigation
-            _buildDrawerItem(context, Icons.dashboard_customize, 'Dashboard', index: 0, isSelected: true),
-            _buildDrawerItem(context, Icons.account_balance_wallet_outlined, 'Transaksi', index: 1),
-            _buildDrawerItem(context, Icons.show_chart, 'Budget', index: 2),
-            _buildDrawerItem(context, Icons.track_changes, 'Tabungan', index: 3), // Investasi mapped to Tabungan
-            _buildDrawerItem(context, Icons.chat_bubble_outline, 'AI Chatbot', index: null),
-            _buildDrawerItem(context, Icons.settings_outlined, 'Pengaturan', index: 4), // Mapped to Profil
-          ],
-        ),
-      ),
+      drawer: AppDrawer(onNavigate: onNavigate, currentIndex: 0),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
@@ -238,7 +174,7 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // Action Buttons (Full width, rounded square, aligned horizontally)
+              // Action Buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -271,7 +207,7 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               // Portofolio Investasi
-              _buildInvestmentPortfolioSection(),
+              _buildInvestmentPortfolioSection(financeData),
               const SizedBox(height: 24),
 
               // Recent Transactions
@@ -304,35 +240,6 @@ class HomeScreen extends StatelessWidget {
         },
         backgroundColor: AppTheme.primaryColor,
         child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildDrawerItem(BuildContext context, IconData icon, String title, {int? index, bool isSelected = false}) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      decoration: BoxDecoration(
-        color: isSelected ? AppTheme.primaryColor : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: isSelected ? Colors.white : AppTheme.textPrimary),
-        title: Text(
-          title,
-          style: TextStyle(
-            color: isSelected ? Colors.white : AppTheme.textPrimary,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-        onTap: () {
-          Navigator.pop(context);
-          if (index != null && onNavigate != null) {
-            onNavigate!(index);
-          } else if (index == null) {
-            // Chatbot screen
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Halaman AI Chatbot belum tersedia.')));
-          }
-        },
       ),
     );
   }
@@ -378,7 +285,6 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildBudgetSection(FinanceProvider financeData) {
-    // Combine all budgets to create a "Total Monthly Budget" overview
     double totalLimit = financeData.budgets.fold(0, (sum, item) => sum + item.limit);
     double totalSpent = financeData.budgets.fold(0, (sum, item) => sum + item.spent);
     double percentage = totalLimit > 0 ? (totalSpent / totalLimit) : 0;
@@ -572,7 +478,20 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInvestmentPortfolioSection() {
+  Widget _buildInvestmentPortfolioSection(FinanceProvider financeData) {
+    final totalInvested = financeData.totalInvestment;
+    final investments = financeData.investments;
+    
+    double totalProfit = 0;
+    double initialValue = 0;
+    for(var item in investments) {
+      double profitAmount = item.amount - (item.amount / (1 + (item.profitPercentage / 100)));
+      totalProfit += profitAmount;
+      initialValue += (item.amount / (1 + (item.profitPercentage / 100)));
+    }
+    double totalProfitPercentage = initialValue > 0 ? (totalProfit / initialValue) * 100 : 0;
+    bool isPositive = totalProfitPercentage >= 0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -606,10 +525,17 @@ class HomeScreen extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppTheme.success.withOpacity(0.1),
+                          color: isPositive ? AppTheme.success.withOpacity(0.1) : AppTheme.danger.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text('+12.5%', style: TextStyle(color: AppTheme.success, fontSize: 10, fontWeight: FontWeight.bold)),
+                        child: Text(
+                          '${isPositive ? '+' : ''}${totalProfitPercentage.toStringAsFixed(1)}%',
+                          style: TextStyle(
+                            color: isPositive ? AppTheme.success : AppTheme.danger,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -620,8 +546,14 @@ class HomeScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const Text('Rp 25.650.000', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                  const Text('+Rp 3.650.000', style: TextStyle(color: AppTheme.success, fontWeight: FontWeight.w600)),
+                  Text(
+                    CurrencyFormat.convertToIdr(totalInvested),
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                  ),
+                  Text(
+                    '${totalProfit >= 0 ? '+' : ''}${CurrencyFormat.convertToIdr(totalProfit)}',
+                    style: TextStyle(color: isPositive ? AppTheme.success : AppTheme.danger, fontWeight: FontWeight.w600),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -630,13 +562,12 @@ class HomeScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: List.generate(10, (index) {
-                  // Generate an increasing curve of heights
                   double height = 20.0 + (index * 4) + (index % 3 * 2);
                   return Container(
                     width: 20,
                     height: height,
                     decoration: BoxDecoration(
-                      color: AppTheme.success.withOpacity(0.3),
+                      color: isPositive ? AppTheme.success.withOpacity(0.3) : AppTheme.danger.withOpacity(0.3),
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(4),
                         topRight: Radius.circular(4),

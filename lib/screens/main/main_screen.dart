@@ -3,6 +3,7 @@ import '../../core/theme.dart';
 import '../home/home_screen.dart';
 import '../transaction/transaction_screen.dart';
 import '../budget/budget_screen.dart';
+import '../investment/investment_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -26,7 +27,7 @@ class _MainScreenState extends State<MainScreen> {
       HomeScreen(onNavigate: _onNavigate),
       const TransactionScreen(),
       const BudgetScreen(),
-      const Center(child: Text('Investasi Screen')),
+      const InvestmentScreen(),
       const Center(child: Text('Profil Screen')),
     ];
 

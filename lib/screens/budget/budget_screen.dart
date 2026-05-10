@@ -4,6 +4,7 @@ import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../providers/finance_provider.dart';
 import '../../models/budget.dart';
+import '../../widgets/app_drawer.dart';
 import 'add_budget_modal.dart';
 
 class BudgetScreen extends StatelessWidget {
@@ -20,6 +21,7 @@ class BudgetScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
+      drawer: const AppDrawer(currentIndex: 2),
       appBar: AppBar(
         title: const Text('Budgets'),
         actions: [
@@ -143,10 +145,16 @@ class BudgetScreen extends StatelessWidget {
           ...budgets.map((budget) => _buildBudgetCard(context, budget)).toList(),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: AppTheme.primaryColor,
-        child: const Icon(Icons.add, color: Colors.white),
+      floatingActionButton: Builder(
+        builder: (context) {
+          return FloatingActionButton(
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+            backgroundColor: AppTheme.primaryColor,
+            child: const Icon(Icons.add, color: Colors.white),
+          );
+        }
       ),
     );
   }
@@ -208,7 +216,7 @@ class BudgetScreen extends StatelessWidget {
               backgroundColor: Colors.grey.shade100,
               valueColor: AlwaysStoppedAnimation<Color>(statusColor),
               minHeight: 6,
-            ),
+                ),
           ),
           const SizedBox(height: 12),
           Row(
