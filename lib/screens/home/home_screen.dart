@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../models/transaction.dart' as t;
 import '../../models/budget.dart';
 import '../../widgets/app_drawer.dart';
+import 'package:mobile_finance/screens/notifications/notif.dart';
 
 class HomeScreen extends StatelessWidget {
   final Function(int)? onNavigate;
@@ -55,25 +56,42 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Stack(
-                    children: [
-                      const Icon(Icons.notifications_none, size: 32),
-                      Positioned(
-                        right: 2,
-                        top: 2,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: AppTheme.danger,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Text(
-                            '3',
-                            style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotifPage(),
+                        ),
+                      );
+                    },
+                    child: Stack(
+                      children: [
+                        const Icon(
+                          Icons.notifications_none,
+                          size: 32,
+                        ),
+                        Positioned(
+                          right: 2,
+                          top: 2,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: AppTheme.danger,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Text(
+                              '3',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
-                      )
-                    ],
+                      ],
+                    ),
                   )
                 ],
               ),
