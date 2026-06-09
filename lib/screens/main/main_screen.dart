@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+
 import '../home/home_screen.dart';
 import '../transaction/transaction_screen.dart';
 import '../budget/budget_screen.dart';
 import '../investment/investment_screen.dart';
 import '../profile/profile_page.dart';
-import '../../widgets/navbar_bottom.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -34,9 +34,30 @@ class _MainScreenState extends State<MainScreen> {
 
     return Scaffold(
       body: screens[_currentIndex],
-      bottomNavigationBar: CustomBottomNavbar(
+      bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
-        onTap: _onNavigate,
+        onTap: (index) => setState(() => _currentIndex = index),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.grid_view), label: 'Home'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.account_balance_wallet_outlined),
+            activeIcon: Icon(Icons.account_balance_wallet),
+            label: 'Transaksi',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.show_chart),
+            label: 'Budget',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: 'Investasi',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Profil',
+          ),
+        ],
       ),
     );
   }

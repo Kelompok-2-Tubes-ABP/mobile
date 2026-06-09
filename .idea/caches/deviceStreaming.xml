@@ -185,6 +185,7 @@
           <option name="screenY" value="2408" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+<<<<<<< HEAD
           <option name="api" value="33" />
           <option name="brand" value="samsung" />
           <option name="codename" value="a13x" />
@@ -197,6 +198,8 @@
           <option name="screenY" value="1600" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+=======
+>>>>>>> master
           <option name="api" value="34" />
           <option name="brand" value="samsung" />
           <option name="codename" value="a14m" />
@@ -353,6 +356,7 @@
           <option name="screenY" value="2340" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+<<<<<<< HEAD
           <option name="api" value="33" />
           <option name="brand" value="samsung" />
           <option name="codename" value="a32" />
@@ -365,6 +369,8 @@
           <option name="screenY" value="2400" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+=======
+>>>>>>> master
           <option name="api" value="36" />
           <option name="brand" value="samsung" />
           <option name="codename" value="a34x" />
@@ -683,6 +689,7 @@
           <option name="screenY" value="2152" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+<<<<<<< HEAD
           <option name="api" value="36" />
           <option name="brand" value="google" />
           <option name="codename" value="comet" />
@@ -695,6 +702,8 @@
           <option name="screenY" value="2152" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+=======
+>>>>>>> master
           <option name="api" value="35" />
           <option name="brand" value="motorola" />
           <option name="codename" value="cuscoi" />
@@ -923,6 +932,7 @@
           <option name="screenY" value="1840" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+<<<<<<< HEAD
           <option name="api" value="36" />
           <option name="brand" value="google" />
           <option name="codename" value="felix" />
@@ -935,6 +945,8 @@
           <option name="screenY" value="1840" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+=======
+>>>>>>> master
           <option name="api" value="33" />
           <option name="brand" value="google" />
           <option name="codename" value="felix_camera" />
@@ -1281,6 +1293,7 @@
         <PersistentDeviceSelectionData>
           <option name="api" value="36" />
           <option name="brand" value="samsung" />
+<<<<<<< HEAD
           <option name="codename" value="m1q" />
           <option name="id" value="m1q" />
           <option name="labId" value="google" />
@@ -1293,6 +1306,8 @@
         <PersistentDeviceSelectionData>
           <option name="api" value="36" />
           <option name="brand" value="samsung" />
+=======
+>>>>>>> master
           <option name="codename" value="m2q" />
           <option name="id" value="m2q" />
           <option name="labId" value="google" />
@@ -1489,6 +1504,7 @@
           <option name="screenY" value="3120" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+<<<<<<< HEAD
           <option name="api" value="36" />
           <option name="brand" value="samsung" />
           <option name="codename" value="q4qksx" />
@@ -1501,6 +1517,8 @@
           <option name="screenY" value="2176" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+=======
+>>>>>>> master
           <option name="api" value="34" />
           <option name="brand" value="samsung" />
           <option name="codename" value="q5q" />
@@ -1755,6 +1773,7 @@
           <option name="screenY" value="2560" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+<<<<<<< HEAD
           <option name="api" value="36" />
           <option name="brand" value="google" />
           <option name="codename" value="tangorpro" />
@@ -1768,6 +1787,8 @@
           <option name="screenY" value="2560" />
         </PersistentDeviceSelectionData>
         <PersistentDeviceSelectionData>
+=======
+>>>>>>> master
           <option name="api" value="35" />
           <option name="brand" value="google" />
           <option name="codename" value="tegu" />

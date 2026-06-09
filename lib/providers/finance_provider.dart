@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import '../models/transaction.dart' as t;
 import '../models/budget.dart';
 import '../models/investment.dart';
 
 class FinanceProvider with ChangeNotifier {
+  final storage = const FlutterSecureStorage();
+
   List<t.Transaction> _transactions = [
     t.Transaction(
       id: 't1',
@@ -85,14 +91,67 @@ class FinanceProvider with ChangeNotifier {
   List<Budget> get budgets => [..._budgets];
 
   final List<Investment> _investments = [
-    Investment(id: 'i1', name: 'Bitcoin', symbol: 'BTC', type: 'crypto', amount: 18000000, profitPercentage: 15.0, icon: Icons.currency_bitcoin, color: Colors.orange, platform: 'Binance', holdings: 0.15, avgCost: 110000000, currentPrice: 120000000),
-    Investment(id: 'i2', name: 'Ethereum', symbol: 'ETH', type: 'crypto', amount: 5150000, profitPercentage: 8.2, icon: Icons.currency_exchange, color: Colors.blueAccent, platform: 'Indodax', holdings: 1.2, avgCost: 35000000, currentPrice: 40000000),
-    Investment(id: 'i3', name: 'Bank Central Asia', symbol: 'BBCA', type: 'saham', amount: 10000000, profitPercentage: 5.4, icon: Icons.account_balance, color: Colors.blue, platform: 'Ajaib', holdings: 1000, avgCost: 9000, currentPrice: 9500),
-    Investment(id: 'i4', name: 'Telkom Indonesia', symbol: 'TLKM', type: 'saham', amount: 5000000, profitPercentage: -2.1, icon: Icons.cell_tower, color: Colors.redAccent, platform: 'Ajaib', holdings: 1500, avgCost: 3500, currentPrice: 3300),
+    Investment(
+      id: 'i1',
+      name: 'Bitcoin',
+      symbol: 'BTC',
+      type: 'crypto',
+      amount: 18000000,
+      profitPercentage: 15.0,
+      icon: Icons.currency_bitcoin,
+      color: Colors.orange,
+      platform: 'Binance',
+      holdings: 0.15,
+      avgCost: 110000000,
+      currentPrice: 120000000,
+    ),
+    Investment(
+      id: 'i2',
+      name: 'Ethereum',
+      symbol: 'ETH',
+      type: 'crypto',
+      amount: 5150000,
+      profitPercentage: 8.2,
+      icon: Icons.currency_exchange,
+      color: Colors.blueAccent,
+      platform: 'Indodax',
+      holdings: 1.2,
+      avgCost: 35000000,
+      currentPrice: 40000000,
+    ),
+    Investment(
+      id: 'i3',
+      name: 'Bank Central Asia',
+      symbol: 'BBCA',
+      type: 'saham',
+      amount: 10000000,
+      profitPercentage: 5.4,
+      icon: Icons.account_balance,
+      color: Colors.blue,
+      platform: 'Ajaib',
+      holdings: 1000,
+      avgCost: 9000,
+      currentPrice: 9500,
+    ),
+    Investment(
+      id: 'i4',
+      name: 'Telkom Indonesia',
+      symbol: 'TLKM',
+      type: 'saham',
+      amount: 5000000,
+      profitPercentage: -2.1,
+      icon: Icons.cell_tower,
+      color: Colors.redAccent,
+      platform: 'Ajaib',
+      holdings: 1500,
+      avgCost: 3500,
+      currentPrice: 3300,
+    ),
   ];
 
   List<Investment> get investments => [..._investments];
-  double get totalInvestment => _investments.fold(0.0, (sum, item) => sum + item.amount);
+  double get totalInvestment =>
+      _investments.fold(0.0, (sum, item) => sum + item.amount);
 
   double get totalPemasukan {
     return _transactions
@@ -108,17 +167,117 @@ class FinanceProvider with ChangeNotifier {
 
   double get totalSaldo => totalPemasukan - totalPengeluaran;
 
+  Future<void> fetchTransactions() async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8000/transaction/'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      print('FETCH TRANSACTION STATUS: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        final List<dynamic> transactionsJson =
+            data['Transaction Retrieved Successfully!!'];
+
+        _transactions = transactionsJson
+            .map((item) => t.Transaction.fromApiJson(item))
+            .toList();
+
+        notifyListeners();
+
+        print('BERHASIL LOAD ${_transactions.length} TRANSAKSI');
+      }
+    } catch (e) {
+      print('ERROR FETCH TRANSACTION: $e');
+    }
+  }
+
+  Future<void> fetchBudgets() async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8000/budget/'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      print('BUDGET STATUS: ${response.statusCode}');
+      print('BUDGET BODY: ${response.body}');
+    } catch (e) {
+      print('ERROR BUDGET: $e');
+    }
+  }
+
+  Future<void> fetchBudgetSummary() async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8000/budget/summary'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      print('SUMMARY STATUS: ${response.statusCode}');
+      print('SUMMARY BODY: ${response.body}');
+    } catch (e) {
+      print('ERROR SUMMARY: $e');
+    }
+  }
+
+  Future<void> fetchAllBudgetSpending() async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8000/budget/all-spending'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      print('SPENDING STATUS: ${response.statusCode}');
+      print('SPENDING BODY: ${response.body}');
+    } catch (e) {
+      print('ERROR SPENDING: $e');
+    }
+  }
+
   void addTransaction(t.Transaction transaction) {
     _transactions.add(transaction);
-    
+
     // Auto update budget spent if it's an expense
     if (transaction.type == t.TransactionType.pengeluaran) {
-      final budgetIndex = _budgets.indexWhere((b) => b.category == transaction.category);
+      final budgetIndex = _budgets.indexWhere(
+        (b) => b.category == transaction.category,
+      );
       if (budgetIndex >= 0) {
         _budgets[budgetIndex].spent += transaction.amount;
       }
     }
-    
+
     notifyListeners();
   }
 

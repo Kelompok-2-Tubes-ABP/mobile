@@ -8,7 +8,7 @@ class Transaction {
   final String category;
   final DateTime date;
   final String time;
-  final String paymentMethod; // e.g. BCA, Cash, GoPay
+  final String paymentMethod;
 
   Transaction({
     required this.id,
@@ -20,4 +20,26 @@ class Transaction {
     required this.time,
     required this.paymentMethod,
   });
+
+  factory Transaction.fromApiJson(Map<String, dynamic> json) {
+    final category = (json['category'] ?? '').toString().toLowerCase();
+
+    return Transaction(
+      id: json['id'] ?? '',
+      title: json['description'] ?? '',
+      amount: (json['amount'] ?? 0).toDouble(),
+
+      type: category == 'pendapatan'
+          ? TransactionType.pemasukan
+          : TransactionType.pengeluaran,
+
+      category: json['category'] ?? '-',
+
+      date: DateTime.parse(json['date']),
+
+      time: DateTime.parse(json['date']).toLocal().toString().substring(11, 16),
+
+      paymentMethod: '-',
+    );
+  }
 }

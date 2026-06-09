@@ -19,12 +19,33 @@ class _TransactionScreenState extends State<TransactionScreen> {
   String selectedCategory = 'All';
 
   final List<String> months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei'];
-  final List<String> categories = ['All', 'Makanan', 'Transportasi', 'Belanja', 'Tagihan'];
+  final List<String> categories = [
+    'All',
+    'Makanan',
+    'Transportasi',
+    'Belanja',
+    'Tagihan',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() async {
+      await context.read<FinanceProvider>().fetchTransactions();
+
+      await context.read<FinanceProvider>().fetchBudgets();
+
+      await context.read<FinanceProvider>().fetchBudgetSummary();
+
+      await context.read<FinanceProvider>().fetchAllBudgetSpending();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final financeData = context.watch<FinanceProvider>();
-    
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
       drawer: const AppDrawer(currentIndex: 1),
@@ -40,7 +61,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
               icon: const Icon(Icons.add, size: 18),
               label: const Text('Tambah'),
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
               ),
             ),
           ),
@@ -62,16 +86,25 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   onTap: () => setState(() => selectedMonth = months[index]),
                   child: Container(
                     margin: const EdgeInsets.only(right: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: isSelected ? AppTheme.primaryColor : Colors.white,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: isSelected ? AppTheme.primaryColor : Colors.grey.shade200),
+                      border: Border.all(
+                        color: isSelected
+                            ? AppTheme.primaryColor
+                            : Colors.grey.shade200,
+                      ),
                     ),
                     child: Text(
                       months[index],
                       style: TextStyle(
-                        color: isSelected ? Colors.white : AppTheme.textSecondary,
+                        color: isSelected
+                            ? Colors.white
+                            : AppTheme.textSecondary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -86,19 +119,29 @@ class _TransactionScreenState extends State<TransactionScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 // Summary Cards
-                _buildSummaryCard('Pemasukan', financeData.totalPemasukan, AppTheme.success),
-                const SizedBox(height: 12),
-                _buildSummaryCard('Pengeluaran', financeData.totalPengeluaran, AppTheme.danger),
+                _buildSummaryCard(
+                  'Pemasukan',
+                  financeData.totalPemasukan,
+                  AppTheme.success,
+                ),
                 const SizedBox(height: 12),
                 _buildSummaryCard(
-                  'Selisih', 
-                  financeData.totalSaldo, 
-                  financeData.totalSaldo >= 0 ? AppTheme.success : AppTheme.danger,
-                  isDiff: true
+                  'Pengeluaran',
+                  financeData.totalPengeluaran,
+                  AppTheme.danger,
                 ),
-                
+                const SizedBox(height: 12),
+                _buildSummaryCard(
+                  'Selisih',
+                  financeData.totalSaldo,
+                  financeData.totalSaldo >= 0
+                      ? AppTheme.success
+                      : AppTheme.danger,
+                  isDiff: true,
+                ),
+
                 const SizedBox(height: 24),
-                
+
                 // Category Filters
                 SizedBox(
                   height: 40,
@@ -108,20 +151,28 @@ class _TransactionScreenState extends State<TransactionScreen> {
                     itemBuilder: (context, index) {
                       bool isSelected = categories[index] == selectedCategory;
                       return GestureDetector(
-                        onTap: () => setState(() => selectedCategory = categories[index]),
+                        onTap: () => setState(
+                          () => selectedCategory = categories[index],
+                        ),
                         child: Container(
                           margin: const EdgeInsets.only(right: 8),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.transparent,
+                            color: isSelected
+                                ? AppTheme.primaryColor.withOpacity(0.1)
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Center(
                             child: Text(
                               categories[index],
                               style: TextStyle(
-                                color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected
+                                    ? AppTheme.primaryColor
+                                    : AppTheme.textSecondary,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                           ),
@@ -130,9 +181,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
                     },
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Grouped Transactions
                 _buildTransactionList(financeData.transactions),
               ],
@@ -149,7 +200,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
             backgroundColor: AppTheme.primaryColor,
             child: const Icon(Icons.add, color: Colors.white),
           );
-        }
+        },
       ),
     );
   }
@@ -163,7 +214,12 @@ class _TransactionScreenState extends State<TransactionScreen> {
     );
   }
 
-  Widget _buildSummaryCard(String title, double amount, Color color, {bool isDiff = false}) {
+  Widget _buildSummaryCard(
+    String title,
+    double amount,
+    Color color, {
+    bool isDiff = false,
+  }) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -174,7 +230,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+          Text(
+            title,
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+          ),
           const SizedBox(height: 4),
           Text(
             '${isDiff && amount > 0 ? '+' : ''}${CurrencyFormat.convertToIdr(amount)}',
@@ -191,8 +250,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   Widget _buildTransactionList(List<t.Transaction> transactions) {
     // Filter by category
-    final filtered = selectedCategory == 'All' 
-        ? transactions 
+    final filtered = selectedCategory == 'All'
+        ? transactions
         : transactions.where((tx) => tx.category == selectedCategory).toList();
 
     if (filtered.isEmpty) {
@@ -206,7 +265,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
     // Group by date (simplified for demo: just showing the date header if it changes)
     return Column(
-      children: filtered.map((tx) => _buildTransactionItem(context, tx)).toList(),
+      children: filtered
+          .map((tx) => _buildTransactionItem(context, tx))
+          .toList(),
     );
   }
 
@@ -224,7 +285,9 @@ class _TransactionScreenState extends State<TransactionScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isPemasukan ? AppTheme.success.withOpacity(0.1) : AppTheme.warning.withOpacity(0.1),
+              color: isPemasukan
+                  ? AppTheme.success.withOpacity(0.1)
+                  : AppTheme.warning.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -238,10 +301,18 @@ class _TransactionScreenState extends State<TransactionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(tx.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                Text(
+                  tx.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text('${tx.category} • ${tx.paymentMethod}', 
-                     style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                Text(
+                  '${tx.category} • ${tx.paymentMethod}',
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                ),
               ],
             ),
           ),
@@ -256,7 +327,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   fontSize: 16,
                 ),
               ),
-              Text(tx.time, style: TextStyle(color: AppTheme.textSecondary, fontSize: 10)),
+              Text(
+                tx.time,
+                style: TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+              ),
             ],
           ),
         ],
@@ -266,11 +340,16 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   IconData _getCategoryIcon(String category) {
     switch (category) {
-      case 'Makanan': return Icons.restaurant;
-      case 'Transportasi': return Icons.directions_car;
-      case 'Belanja': return Icons.shopping_bag;
-      case 'Tagihan': return Icons.receipt;
-      default: return Icons.category;
+      case 'Makanan':
+        return Icons.restaurant;
+      case 'Transportasi':
+        return Icons.directions_car;
+      case 'Belanja':
+        return Icons.shopping_bag;
+      case 'Tagihan':
+        return Icons.receipt;
+      default:
+        return Icons.category;
     }
   }
 }
