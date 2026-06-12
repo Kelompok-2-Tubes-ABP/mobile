@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../widgets/navbar_bottom.dart';
+import '../../providers/auth_provider.dart';
 import '../main/main_screen.dart';
 import '../transaction/transaction_screen.dart';
 import '../budget/budget_screen.dart';
@@ -40,6 +42,7 @@ class Settings extends StatelessWidget {
   }
 
   void _logout(BuildContext context) {
+    context.read<AuthProvider>().logout();
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(

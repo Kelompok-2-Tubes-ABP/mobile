@@ -18,6 +18,73 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
   String selectedFilter = 'Semua';
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      if (mounted) {
+        context.read<FinanceProvider>().fetchPortfolio();
+      }
+    });
+  }
+
+  Future<void> _confirmDeleteInvestment(Investment item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Investasi'),
+        content: Text('Apakah Anda yakin ingin menghapus investasi ${item.name} (${item.symbol})?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      try {
+        final financeProvider = context.read<FinanceProvider>();
+        final success = await financeProvider.deleteInvestment(item.id);
+        if (!mounted) return;
+        Navigator.pop(context); // Pop loading dialog
+        
+        if (success) {
+          await financeProvider.fetchPortfolio();
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Investasi ${item.name} berhasil dihapus')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal menghapus investasi dari server')),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        Navigator.pop(context); // Pop loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final financeData = context.watch<FinanceProvider>();
     final allInvestments = financeData.investments;
@@ -27,18 +94,33 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
       filteredInvestments = allInvestments.where((item) => item.type.toLowerCase() == selectedFilter.toLowerCase()).toList();
     }
 
-    double totalValue = filteredInvestments.fold(0, (sum, item) => sum + item.amount);
-    
-    // Mock profit calculation
-    double totalProfit = 0;
-    double initialValue = 0;
-    for(var item in filteredInvestments) {
-      double profitAmount = item.amount - (item.amount / (1 + (item.profitPercentage / 100)));
-      totalProfit += profitAmount;
-      initialValue += (item.amount / (1 + (item.profitPercentage / 100)));
+    double totalValue;
+    double totalProfit;
+    double totalProfitPercentage;
+    bool isPositive;
+
+    if (selectedFilter == 'Semua' && financeData.investmentSummary.totalValue > 0) {
+      totalValue = financeData.investmentSummary.totalValue;
+      totalProfit = financeData.investmentSummary.gainLoss;
+      totalProfitPercentage = financeData.investmentSummary.gainLossPercent;
+      isPositive = totalProfitPercentage >= 0;
+    } else {
+      totalValue = filteredInvestments.fold(0, (sum, item) => sum + item.amount);
+      totalProfit = 0;
+      double initialValue = 0;
+      for(var item in filteredInvestments) {
+        double profitAmount = 0;
+        if (item.profitPercentage != -100) {
+          profitAmount = item.amount - (item.amount / (1 + (item.profitPercentage / 100)));
+        } else {
+          profitAmount = -item.amount;
+        }
+        totalProfit += profitAmount;
+        initialValue += (item.amount / (1 + (item.profitPercentage / 100)));
+      }
+      totalProfitPercentage = initialValue > 0 ? (totalProfit / initialValue) * 100 : 0;
+      isPositive = totalProfitPercentage >= 0;
     }
-    double totalProfitPercentage = initialValue > 0 ? (totalProfit / initialValue) * 100 : 0;
-    bool isPositive = totalProfitPercentage >= 0;
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
@@ -49,142 +131,160 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
           IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Header Chart Section
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
+      body: financeData.isLoadingInvestment && allInvestments.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: () async {
+                await financeData.fetchPortfolio();
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    // Header Chart Section
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(32),
+                          bottomRight: Radius.circular(32),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Total Portofolio', style: TextStyle(color: AppTheme.textSecondary)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isPositive ? AppTheme.success.withOpacity(0.1) : AppTheme.danger.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '${isPositive ? '+' : ''}${totalProfitPercentage.toStringAsFixed(2)}%',
+                                  style: TextStyle(
+                                    color: isPositive ? AppTheme.success : AppTheme.danger,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            CurrencyFormat.convertToIdr(totalValue),
+                            style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 32,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${totalProfit >= 0 ? '+' : ''}${CurrencyFormat.convertToIdr(totalProfit)}',
+                            style: TextStyle(
+                              color: isPositive ? AppTheme.success : AppTheme.danger,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+                          
+                          // Bar Chart (Custom Row of Bars like HomeScreen)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: List.generate(15, (index) {
+                              double height = 30.0 + (index * 5) + (index % 4 * 10);
+                              if (height > 120) height = 120;
+                              return Container(
+                                width: 15,
+                                height: height,
+                                decoration: BoxDecoration(
+                                  color: isPositive ? AppTheme.success.withOpacity(0.3) : AppTheme.danger.withOpacity(0.3),
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(4),
+                                    topRight: Radius.circular(4),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          // Add Button below chart
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (context) => const AddInvestmentModal(),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.add, size: 20),
+                              label: const Text('Tambah Data Portofolio', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    // Filters
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Row(
+                        children: [
+                          _buildFilterTab('Semua'),
+                          const SizedBox(width: 12),
+                          _buildFilterTab('Crypto'),
+                          const SizedBox(width: 12),
+                          _buildFilterTab('Saham'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Assets List
+                    filteredInvestments.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(40.0),
+                            child: Center(
+                              child: Text(
+                                'Belum ada portofolio investasi.',
+                                style: TextStyle(color: AppTheme.textSecondary),
+                              ),
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            physics: const NeverScrollableScrollPhysics(),
+                            shrinkWrap: true,
+                            itemCount: filteredInvestments.length,
+                            itemBuilder: (context, index) {
+                              final item = filteredInvestments[index];
+                              return _buildAssetCard(item);
+                            },
+                          ),
+                    const SizedBox(height: 80), // Padding for FAB/bottom
+                  ],
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Total Portofolio', style: TextStyle(color: AppTheme.textSecondary)),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isPositive ? AppTheme.success.withOpacity(0.1) : AppTheme.danger.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${isPositive ? '+' : ''}${totalProfitPercentage.toStringAsFixed(2)}%',
-                          style: TextStyle(
-                            color: isPositive ? AppTheme.success : AppTheme.danger,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    CurrencyFormat.convertToIdr(totalValue),
-                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 32,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${totalProfit >= 0 ? '+' : ''}${CurrencyFormat.convertToIdr(totalProfit)}',
-                    style: TextStyle(
-                      color: isPositive ? AppTheme.success : AppTheme.danger,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  
-                  // Bar Chart (Custom Row of Bars like HomeScreen)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: List.generate(15, (index) {
-                      double height = 30.0 + (index * 5) + (index % 4 * 10);
-                      if (height > 120) height = 120;
-                      return Container(
-                        width: 15,
-                        height: height,
-                        decoration: BoxDecoration(
-                          color: isPositive ? AppTheme.success.withOpacity(0.3) : AppTheme.danger.withOpacity(0.3),
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(4),
-                            topRight: Radius.circular(4),
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Add Button below chart
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        showModalBottomSheet(
-                          context: context,
-                          isScrollControlled: true,
-                          backgroundColor: Colors.transparent,
-                          builder: (context) => const AddInvestmentModal(),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: const Icon(Icons.add, size: 20),
-                      label: const Text('Tambah Data Portofolio', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
             ),
-            const SizedBox(height: 24),
-            
-            // Filters
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  _buildFilterTab('Semua'),
-                  const SizedBox(width: 12),
-                  _buildFilterTab('Crypto'),
-                  const SizedBox(width: 12),
-                  _buildFilterTab('Saham'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            
-            // Assets List
-            ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              itemCount: filteredInvestments.length,
-              itemBuilder: (context, index) {
-                final item = filteredInvestments[index];
-                return _buildAssetCard(item);
-              },
-            ),
-            const SizedBox(height: 80), // Padding for FAB/bottom
-          ],
-        ),
-      ),
       floatingActionButton: Builder(
         builder: (context) {
           return FloatingActionButton(
@@ -225,7 +325,12 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
 
   Widget _buildAssetCard(Investment item) {
     bool isPositive = item.profitPercentage >= 0;
-    double profitAmount = item.amount - (item.amount / (1 + (item.profitPercentage / 100)));
+    double profitAmount = 0;
+    if (item.profitPercentage != -100) {
+      profitAmount = item.amount - (item.amount / (1 + (item.profitPercentage / 100)));
+    } else {
+      profitAmount = -item.amount;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -295,6 +400,13 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
                     style: TextStyle(color: isPositive ? AppTheme.success : AppTheme.danger, fontSize: 12, fontWeight: FontWeight.bold),
                   ),
                 ],
+              ),
+              const SizedBox(width: 8),
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: const Icon(Icons.delete_outline, color: AppTheme.danger, size: 22),
+                onPressed: () => _confirmDeleteInvestment(item),
               ),
             ],
           ),

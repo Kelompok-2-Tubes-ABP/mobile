@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'core/theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/finance_provider.dart';
-import 'screens/auth/onboarding_screen.dart';
+import 'screens/auth/splash_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
         title: 'FinanceApp',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
-        home: const OnboardingScreen(),
+        home: const SplashScreen(),
       ),
     );
   }

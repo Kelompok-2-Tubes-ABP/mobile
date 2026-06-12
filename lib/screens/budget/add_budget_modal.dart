@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme.dart';
-import '../../models/budget.dart';
 import '../../providers/finance_provider.dart';
+
 
 class AddBudgetModal extends StatefulWidget {
   const AddBudgetModal({super.key});
@@ -170,14 +170,26 @@ class _AddBudgetModalState extends State<AddBudgetModal> {
     final amount = double.tryParse(_amountController.text) ?? 0;
     if (amount <= 0) return;
 
-    final newBudget = Budget(
-      id: DateTime.now().toString(),
-      category: selectedCategory,
-      limit: amount,
-      spent: 0,
+    // Tampilkan dialog loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    context.read<FinanceProvider>().addBudget(newBudget);
-    Navigator.pop(context);
+    context.read<FinanceProvider>().createCategoryBudget(selectedCategory, amount).then((success) {
+      if (!mounted) return;
+      Navigator.pop(context); // Tutup dialog loading
+      if (success) {
+        Navigator.pop(context); // Tutup modal add budget
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Budget berhasil disimpan')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal menyimpan budget')),
+        );
+      }
+    });
   }
 }

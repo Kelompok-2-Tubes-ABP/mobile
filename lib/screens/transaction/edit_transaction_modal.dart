@@ -5,52 +5,22 @@ import '../../core/utils.dart';
 import '../../models/transaction.dart' as t;
 import '../../providers/finance_provider.dart';
 
-class AddTransactionModal extends StatefulWidget {
-  final String selectedMonth;
+class EditTransactionModal extends StatefulWidget {
+  final t.Transaction transaction;
 
-  const AddTransactionModal({super.key, required this.selectedMonth});
+  const EditTransactionModal({super.key, required this.transaction});
 
   @override
-  State<AddTransactionModal> createState() => _AddTransactionModalState();
+  State<EditTransactionModal> createState() => _EditTransactionModalState();
 }
 
-class _AddTransactionModalState extends State<AddTransactionModal> {
-  t.TransactionType selectedType = t.TransactionType.pengeluaran;
+class _EditTransactionModalState extends State<EditTransactionModal> {
+  late t.TransactionType selectedType;
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
-  String selectedCategory = 'Makanan';
+  late String selectedCategory;
   late DateTime selectedDate;
-  String selectedPaymentMethod = 'Cash';
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    final monthMap = {
-      'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'Mei': 5, 'Juni': 6,
-      'Juli': 7, 'Agustus': 8, 'September': 9, 'Oktober': 10, 'November': 11, 'Desember': 12
-    };
-    final targetMonth = monthMap[widget.selectedMonth] ?? now.month;
-    if (targetMonth == now.month) {
-      selectedDate = now;
-    } else {
-      selectedDate = DateTime(now.year, targetMonth, 1);
-    }
-  }
-
-  void _selectDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-    if (picked != null && picked != selectedDate) {
-      setState(() {
-        selectedDate = picked;
-      });
-    }
-  }
+  late String selectedPaymentMethod;
 
   final List<Map<String, dynamic>> incomeCategories = [
     {
@@ -83,11 +53,49 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    selectedType = widget.transaction.type;
+    _amountController.text = widget.transaction.amount.toInt().toString();
+    _descriptionController.text = widget.transaction.title;
+    selectedDate = widget.transaction.date;
+    selectedPaymentMethod = widget.transaction.paymentMethod;
+
+    // Normalisasi kategori dari API. Jika kategori bernilai 'pendapatan', ubah ke default 'Gaji' di UI
+    selectedCategory = widget.transaction.category;
+    if (selectedCategory.toLowerCase() == 'pendapatan') {
+      selectedCategory = 'Gaji';
+    }
+  }
+
+  void _selectDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     List<Map<String, dynamic>> categories =
         selectedType == t.TransactionType.pemasukan
         ? incomeCategories
         : expenseCategories;
+
+    // Memastikan kategori yang terpilih ada di dalam daftar kategori, jika tidak pilih item pertama
+    final categoryNames = categories
+        .map((cat) => cat['name'] as String)
+        .toList();
+    if (!categoryNames.contains(selectedCategory)) {
+      selectedCategory = categoryNames.first;
+    }
 
     return Container(
       padding: EdgeInsets.only(
@@ -118,7 +126,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Tambah Transaksi',
+                  'Edit Transaksi',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 IconButton(
@@ -337,8 +345,8 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _saveTransaction,
-                child: const Text('Simpan Transaksi'),
+                onPressed: _updateTransaction,
+                child: const Text('Simpan Perubahan'),
               ),
             ),
           ],
@@ -391,15 +399,12 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     );
   }
 
-  void _saveTransaction() {
+  void _updateTransaction() {
     final amount = double.tryParse(_amountController.text) ?? 0;
     if (amount <= 0) return;
 
-    final now = DateTime.now();
-    final timeString = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-
-    final newTx = t.Transaction(
-      id: DateTime.now().toString(),
+    final updatedTx = t.Transaction(
+      id: widget.transaction.id,
       title: _descriptionController.text.isEmpty
           ? selectedCategory
           : _descriptionController.text,
@@ -407,7 +412,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
       type: selectedType,
       category: selectedCategory,
       date: selectedDate,
-      time: timeString,
+      time: widget.transaction.time,
       paymentMethod: selectedPaymentMethod,
     );
 
@@ -420,16 +425,20 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    financeProvider.createTransaction(newTx).then((success) {
-      if (!mounted) return;
-      Navigator.pop(context); // Tutup loading dialog
-      if (success) {
-        Navigator.pop(context); // Tutup modal sheet
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal menyimpan transaksi ke backend')),
-        );
-      }
-    });
+    financeProvider
+        .updateTransaction(widget.transaction.id, updatedTx)
+        .then((success) {
+          if (!mounted) return;
+          Navigator.pop(context); // Tutup loading dialog
+          if (success) {
+            Navigator.pop(context); // Tutup modal sheet
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Gagal memperbarui transaksi ke backend'),
+              ),
+            );
+          }
+        });
   }
 }

@@ -1,198 +1,249 @@
 import 'package:flutter/material.dart';
-import '../../widgets/navbar_bottom.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/finance_provider.dart';
+import '../../models/user.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProfile();
+  }
+
+  void _fetchProfile() async {
+    setState(() => _isLoading = true);
+    try {
+      await context.read<AuthProvider>().getProfile();
+    } catch (e) {
+      print('Error loading profile: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final authData = context.watch<AuthProvider>();
+    final financeData = context.watch<FinanceProvider>();
+    final user = authData.currentUser;
+
     return Scaffold(
       backgroundColor: const Color(0xffF8FAFC),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Profil',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xff1E293B),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // ================= PROFILE CARD =================
-              _buildProfileCard(),
-
-              const SizedBox(height: 20),
-
-              // ================= STATS =================
-              _buildStatCard(
-                icon: Icons.calendar_today_outlined,
-                iconColor: Color(0xff4F46E5),
-                title: 'Member Sejak',
-                value: 'Januari 2026',
-              ),
-              const SizedBox(height: 16),
-
-              _buildStatCard(
-                icon: Icons.account_balance_wallet_outlined,
-                iconColor: Color(0xff10B981),
-                title: 'Total Transaksi',
-                value: '245',
-              ),
-              const SizedBox(height: 16),
-
-              _buildStatCard(
-                icon: Icons.credit_card_outlined,
-                iconColor: Color(0xffF59E0B),
-                title: 'Akun Terhubung',
-                value: '5',
-              ),
-
-              const SizedBox(height: 20),
-
-              // ================= INFORMASI PRIBADI =================
-              _buildSectionCard(
-                title: 'Informasi Pribadi',
-                child: Column(
-                  children: [
-                    _buildTextField('Username', 'orcas'),
-                    _buildTextField('Email', 'orcas@financeapp.com'),
-                    _buildTextField('Nama Lengkap', 'Orcas Finance'),
-                    _buildTextField('Nomor Telepon', '+62 812 3456 7890'),
-
-                    const SizedBox(height: 20),
-
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xff4F46E5),
-                          elevation: 4,
-                          shadowColor: Colors.black26,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        onPressed: () {},
-                        child: const Text(
-                          'Simpan Perubahan',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // ================= GANTI PASSWORD =================
-              _buildSectionCard(
-                title: 'Ganti Password',
-                child: Column(
-                  children: [
-                    _buildPasswordField('Password Lama'),
-                    _buildPasswordField('Password Baru'),
-                    _buildPasswordField('Konfirmasi Password Baru'),
-
-                    const SizedBox(height: 20),
-
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xff10B981),
-                          elevation: 4,
-                          shadowColor: Colors.black26,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 28,
-                            vertical: 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        onPressed: () {},
-                        child: const Text(
-                          'Ganti Password',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // ================= ZONA BAHAYA =================
-              _buildSectionCard(
-                title: 'Zona Bahaya',
-                titleColor: const Color(0xffEF4444),
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Hapus akun akan menghapus semua data kamu secara permanen. Aksi ini tidak dapat dibatalkan.',
+                      'Profil',
                       style: TextStyle(
-                        color: Color(0xff64748B),
-                        height: 1.5,
-                        fontSize: 14,
+                        fontSize: 32,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xff1E293B),
                       ),
                     ),
                     const SizedBox(height: 20),
 
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xffEF4444),
-                        elevation: 4,
-                        shadowColor: Colors.black26,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      onPressed: () {},
-                      child: const Text(
-                        'Hapus Akun',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    // ================= PROFILE CARD =================
+                    _buildProfileCard(user),
+
+                    const SizedBox(height: 20),
+
+                    // ================= STATS =================
+                    _buildStatCard(
+                      icon: Icons.calendar_today_outlined,
+                      iconColor: const Color(0xff4F46E5),
+                      title: 'Member Sejak',
+                      value: 'Juni 2026',
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildStatCard(
+                      icon: Icons.account_balance_wallet_outlined,
+                      iconColor: const Color(0xff10B981),
+                      title: 'Total Transaksi',
+                      value: financeData.transactions.length.toString(),
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildStatCard(
+                      icon: Icons.credit_card_outlined,
+                      iconColor: const Color(0xffF59E0B),
+                      title: 'Akun Terhubung',
+                      value: '1',
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // ================= INFORMASI PRIBADI =================
+                    _buildSectionCard(
+                      title: 'Informasi Pribadi',
+                      child: Column(
+                        children: [
+                          _buildTextField('Username', user?.name ?? '-'),
+                          _buildTextField('Email', user?.email ?? '-'),
+                          _buildTextField('Nama Lengkap', user?.name ?? '-'),
+                          _buildTextField('Nomor Telepon', '-'),
+
+                          const SizedBox(height: 20),
+
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xff4F46E5),
+                                elevation: 4,
+                                shadowColor: Colors.black26,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Fitur ubah profil belum diimplementasikan')),
+                                );
+                              },
+                              child: const Text(
+                                'Simpan Perubahan',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+
+                    const SizedBox(height: 20),
+
+                    // ================= GANTI PASSWORD =================
+                    _buildSectionCard(
+                      title: 'Ganti Password',
+                      child: Column(
+                        children: [
+                          _buildPasswordField('Password Lama'),
+                          _buildPasswordField('Password Baru'),
+                          _buildPasswordField('Konfirmasi Password Baru'),
+
+                          const SizedBox(height: 20),
+
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xff10B981),
+                                elevation: 4,
+                                shadowColor: Colors.black26,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 28,
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              onPressed: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Fitur ganti password belum diimplementasikan')),
+                                );
+                              },
+                              child: const Text(
+                                'Ganti Password',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // ================= ZONA BAHAYA =================
+                    _buildSectionCard(
+                      title: 'Zona Bahaya',
+                      titleColor: const Color(0xffEF4444),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Hapus akun akan menghapus semua data kamu secara permanen. Aksi ini tidak dapat dibatalkan.',
+                            style: TextStyle(
+                              color: Color(0xff64748B),
+                              height: 1.5,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xffEF4444),
+                              elevation: 4,
+                              shadowColor: Colors.black26,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Fitur hapus akun belum diimplementasikan')),
+                              );
+                            },
+                            child: const Text(
+                              'Hapus Akun',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
-
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
       ),
     );
   }
 
   // ================= PROFILE CARD =================
-  Widget _buildProfileCard() {
+  Widget _buildProfileCard(User? user) {
+    final name = user?.name ?? 'Guest';
+    final email = user?.email ?? 'guest@financeapp.com';
+    final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'G';
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
@@ -204,9 +255,9 @@ class ProfilePage extends StatelessWidget {
               CircleAvatar(
                 radius: 48,
                 backgroundColor: const Color(0xff4F46E5),
-                child: const Text(
-                  'O',
-                  style: TextStyle(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 36,
                     fontWeight: FontWeight.w500,
@@ -234,9 +285,9 @@ class ProfilePage extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
-          const Text(
-            'Orcas',
-            style: TextStyle(
+          Text(
+            name,
+            style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w600,
               color: Color(0xff1E293B),
@@ -244,9 +295,9 @@ class ProfilePage extends StatelessWidget {
           ),
           const SizedBox(height: 6),
 
-          const Text(
-            'orcas@financeapp.com',
-            style: TextStyle(
+          Text(
+            email,
+            style: const TextStyle(
               color: Color(0xff64748B),
               fontSize: 16,
             ),
@@ -359,6 +410,7 @@ class ProfilePage extends StatelessWidget {
           const SizedBox(height: 8),
           TextField(
             controller: TextEditingController(text: value),
+            readOnly: true,
             decoration: InputDecoration(
               filled: true,
               fillColor: const Color(0xffF8FAFC),

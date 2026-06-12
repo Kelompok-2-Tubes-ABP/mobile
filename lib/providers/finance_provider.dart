@@ -6,9 +6,29 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/transaction.dart' as t;
 import '../models/budget.dart';
 import '../models/investment.dart';
+import '../models/quick_stats.dart';
+import '../models/savings_goal.dart';
 
 class FinanceProvider with ChangeNotifier {
   final storage = const FlutterSecureStorage();
+  
+  QuickStats _quickStats = QuickStats.empty();
+  QuickStats get quickStats => _quickStats;
+
+  List<SavingsGoal> _savingsGoals = [];
+  List<SavingsGoal> get savingsGoals => [..._savingsGoals];
+
+  SavingsSummary _savingsSummary = SavingsSummary.empty();
+  SavingsSummary get savingsSummary => _savingsSummary;
+
+  bool _isLoadingSavings = false;
+  bool get isLoadingSavings => _isLoadingSavings;
+
+  InvestmentSummary _investmentSummary = InvestmentSummary.empty();
+  InvestmentSummary get investmentSummary => _investmentSummary;
+
+  bool _isLoadingInvestment = false;
+  bool get isLoadingInvestment => _isLoadingInvestment;
 
   List<t.Transaction> _transactions = [
     t.Transaction(
@@ -73,14 +93,7 @@ class FinanceProvider with ChangeNotifier {
     ),
   ];
 
-  List<Budget> _budgets = [
-    Budget(id: 'b1', category: 'Makanan', limit: 1000000, spent: 850000),
-    Budget(id: 'b2', category: 'Transportasi', limit: 800000, spent: 300000),
-    Budget(id: 'b3', category: 'Hiburan', limit: 500000, spent: 650000),
-    Budget(id: 'b4', category: 'Belanja', limit: 1200000, spent: 450000),
-    Budget(id: 'b5', category: 'Tagihan', limit: 700000, spent: 300000),
-    Budget(id: 'b6', category: 'Kesehatan', limit: 500000, spent: 0),
-  ];
+  List<Budget> _budgets = [];
 
   List<t.Transaction> get transactions {
     // Sort transactions by date descending
@@ -90,64 +103,7 @@ class FinanceProvider with ChangeNotifier {
 
   List<Budget> get budgets => [..._budgets];
 
-  final List<Investment> _investments = [
-    Investment(
-      id: 'i1',
-      name: 'Bitcoin',
-      symbol: 'BTC',
-      type: 'crypto',
-      amount: 18000000,
-      profitPercentage: 15.0,
-      icon: Icons.currency_bitcoin,
-      color: Colors.orange,
-      platform: 'Binance',
-      holdings: 0.15,
-      avgCost: 110000000,
-      currentPrice: 120000000,
-    ),
-    Investment(
-      id: 'i2',
-      name: 'Ethereum',
-      symbol: 'ETH',
-      type: 'crypto',
-      amount: 5150000,
-      profitPercentage: 8.2,
-      icon: Icons.currency_exchange,
-      color: Colors.blueAccent,
-      platform: 'Indodax',
-      holdings: 1.2,
-      avgCost: 35000000,
-      currentPrice: 40000000,
-    ),
-    Investment(
-      id: 'i3',
-      name: 'Bank Central Asia',
-      symbol: 'BBCA',
-      type: 'saham',
-      amount: 10000000,
-      profitPercentage: 5.4,
-      icon: Icons.account_balance,
-      color: Colors.blue,
-      platform: 'Ajaib',
-      holdings: 1000,
-      avgCost: 9000,
-      currentPrice: 9500,
-    ),
-    Investment(
-      id: 'i4',
-      name: 'Telkom Indonesia',
-      symbol: 'TLKM',
-      type: 'saham',
-      amount: 5000000,
-      profitPercentage: -2.1,
-      icon: Icons.cell_tower,
-      color: Colors.redAccent,
-      platform: 'Ajaib',
-      holdings: 1500,
-      avgCost: 3500,
-      currentPrice: 3300,
-    ),
-  ];
+  List<Investment> _investments = [];
 
   List<Investment> get investments => [..._investments];
   double get totalInvestment =>
@@ -166,6 +122,35 @@ class FinanceProvider with ChangeNotifier {
   }
 
   double get totalSaldo => totalPemasukan - totalPengeluaran;
+
+  Future<void> fetchQuickStats() async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8000/analytics/quick'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      print('QUICK STATS STATUS: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        if (body['success'] == true && body['data'] != null) {
+          _quickStats = QuickStats.fromJson(body['data']);
+          notifyListeners();
+          print('BERHASIL LOAD QUICK STATS');
+        }
+      }
+    } catch (e) {
+      print('ERROR FETCH QUICK STATS: $e');
+    }
+  }
 
   Future<void> fetchTransactions() async {
     final token = await storage.read(key: 'token');
@@ -202,7 +187,7 @@ class FinanceProvider with ChangeNotifier {
     }
   }
 
-  Future<void> fetchBudgets() async {
+  Future<void> fetchBudgets({String? month}) async {
     final token = await storage.read(key: 'token');
 
     if (token == null) {
@@ -210,16 +195,67 @@ class FinanceProvider with ChangeNotifier {
       return;
     }
 
+    final targetMonth = month ?? "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/budget/'),
+        Uri.parse('http://localhost:8000/budget/category/by-month/$targetMonth/all'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
       print('BUDGET STATUS: ${response.statusCode}');
-      print('BUDGET BODY: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        _budgets = data.map((item) => Budget.fromApiJson(item)).toList();
+        notifyListeners();
+        print('BERHASIL LOAD ${_budgets.length} BUDGETS');
+      } else {
+        print('GAGAL LOAD BUDGETS: ${response.body}');
+      }
     } catch (e) {
       print('ERROR BUDGET: $e');
+    }
+  }
+
+  Future<bool> createCategoryBudget(String category, double limit) async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return false;
+    }
+
+    final targetMonth = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8000/budget/category'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'category': category,
+          'limit': limit,
+          'month': targetMonth,
+        }),
+      );
+
+      print('CREATE BUDGET STATUS: ${response.statusCode}');
+      print('CREATE BUDGET BODY: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('BUDGET BERHASIL DITAMBAHKAN KE BACKEND');
+        await fetchBudgets();
+        return true;
+      } else {
+        print('Gagal menambahkan budget: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('ERROR CREATE BUDGET: $e');
+      return false;
     }
   }
 
@@ -281,6 +317,164 @@ class FinanceProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> createTransaction(t.Transaction transaction) async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return false;
+    }
+
+    // Map transaction category to align with frontend parsing & backend categorizations
+    String categoryToSend = transaction.category;
+    if (transaction.type == t.TransactionType.pemasukan) {
+      // Map all income categories to "pendapatan" so that they are correctly
+      // parsed back as TransactionType.pemasukan by the frontend API parser.
+      categoryToSend = 'pendapatan';
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8000/transaction/new'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'amount': transaction.amount,
+          'category': categoryToSend,
+          'description': transaction.title,
+          'status': 'completed',
+          'date': transaction.date.toUtc().toIso8601String(),
+        }),
+      );
+
+      print('CREATE TRANSACTION STATUS: ${response.statusCode}');
+      print('CREATE TRANSACTION BODY: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('TRANSAKSI BERHASIL DITAMBAHKAN KE BACKEND');
+        
+        // Refresh transaction list from API
+        await fetchTransactions();
+        
+        // Refresh budget as well in case budget spent needs update
+        await fetchBudgets();
+        
+        // Refresh quick stats
+        await fetchQuickStats();
+        
+        notifyListeners();
+        return true;
+      } else {
+        print('Gagal menambahkan transaksi: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('ERROR CREATE TRANSACTION: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteTransaction(String id) async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return false;
+    }
+
+    try {
+      final response = await http.delete(
+        Uri.parse('http://localhost:8000/transaction/delete/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('DELETE TRANSACTION STATUS: ${response.statusCode}');
+      print('DELETE TRANSACTION BODY: ${response.body}');
+
+      if (response.statusCode == 200) {
+        print('TRANSAKSI BERHASIL DIHAPUS DARI BACKEND');
+        
+        // Refresh transaction list from API
+        await fetchTransactions();
+        
+        // Refresh budget as well in case budget spent needs update
+        await fetchBudgets();
+        
+        // Refresh quick stats
+        await fetchQuickStats();
+        
+        notifyListeners();
+        return true;
+      } else {
+        print('Gagal menghapus transaksi: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('ERROR DELETE TRANSACTION: $e');
+      return false;
+    }
+  }
+
+  Future<bool> updateTransaction(String id, t.Transaction transaction) async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return false;
+    }
+
+    // Map transaction category to align with frontend parsing & backend categorizations
+    String categoryToSend = transaction.category;
+    if (transaction.type == t.TransactionType.pemasukan) {
+      categoryToSend = 'pendapatan';
+    }
+
+    try {
+      final response = await http.patch(
+        Uri.parse('http://localhost:8000/transaction/update/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'amount': transaction.amount,
+          'category': categoryToSend,
+          'description': transaction.title,
+          'status': 'completed',
+        }),
+      );
+
+      print('UPDATE TRANSACTION STATUS: ${response.statusCode}');
+      print('UPDATE TRANSACTION BODY: ${response.body}');
+
+      if (response.statusCode == 200) {
+        print('TRANSAKSI BERHASIL DIPERBAIKIN DI BACKEND');
+        
+        // Refresh transaction list from API
+        await fetchTransactions();
+        
+        // Refresh budget as well in case budget spent needs update
+        await fetchBudgets();
+        
+        // Refresh quick stats
+        await fetchQuickStats();
+        
+        notifyListeners();
+        return true;
+      } else {
+        print('Gagal mengubah transaksi: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('ERROR UPDATE TRANSACTION: $e');
+      return false;
+    }
+  }
+
   void addBudget(Budget budget) {
     _budgets.add(budget);
     notifyListeners();
@@ -289,5 +483,294 @@ class FinanceProvider with ChangeNotifier {
   void addInvestment(Investment investment) {
     _investments.add(investment);
     notifyListeners();
+  }
+
+  Future<void> fetchSavingsGoals() async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return;
+    }
+
+    _isLoadingSavings = true;
+    notifyListeners();
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8000/savings_goal/get'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      print('SAVINGS GOALS GET STATUS: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        _savingsGoals = data.map((item) => SavingsGoal.fromJson(item)).toList();
+        print('BERHASIL LOAD ${_savingsGoals.length} SAVINGS GOALS');
+      } else {
+        print('GAGAL LOAD SAVINGS GOALS: ${response.body}');
+      }
+    } catch (e) {
+      print('ERROR FETCH SAVINGS GOALS: $e');
+    } finally {
+      _isLoadingSavings = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchSavingsGoalSummary() async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8000/savings_goal/summary'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      print('SAVINGS SUMMARY STATUS: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        _savingsSummary = SavingsSummary.fromJson(data);
+        notifyListeners();
+        print('BERHASIL LOAD SAVINGS SUMMARY');
+      } else {
+        print('GAGAL LOAD SAVINGS SUMMARY: ${response.body}');
+      }
+    } catch (e) {
+      print('ERROR FETCH SAVINGS SUMMARY: $e');
+    }
+  }
+
+  Future<bool> createSavingsGoal(String name, String description, double targetAmount, DateTime targetDate, String category) async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return false;
+    }
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8000/savings_goal/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'name': name,
+          'description': description,
+          'target_amount': targetAmount,
+          'target_date': targetDate.toUtc().toIso8601String(),
+          'category': category,
+          'priority': 2,
+        }),
+      );
+
+      print('CREATE SAVINGS GOAL STATUS: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('SAVINGS GOAL BERHASIL DITAMBAHKAN');
+        await fetchSavingsGoals();
+        await fetchSavingsGoalSummary();
+        return true;
+      } else {
+        print('Gagal menambahkan savings goal: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('ERROR CREATE SAVINGS GOAL: $e');
+      return false;
+    }
+  }
+
+  Future<void> fetchInvestments() async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return;
+    }
+
+    _isLoadingInvestment = true;
+    notifyListeners();
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8000/investment/'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      print('INVESTMENT GET STATUS: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        _investments = data.map((item) => Investment.fromJson(item)).toList();
+        print('BERHASIL LOAD ${_investments.length} INVESTMENTS');
+      } else {
+        print('GAGAL LOAD INVESTMENTS: ${response.body}');
+      }
+    } catch (e) {
+      print('ERROR FETCH INVESTMENTS: $e');
+    } finally {
+      _isLoadingInvestment = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchInvestmentSummary() async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return;
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8000/investment/summary'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      print('INVESTMENT SUMMARY STATUS: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        _investmentSummary = InvestmentSummary.fromJson(data);
+        notifyListeners();
+        print('BERHASIL LOAD INVESTMENT SUMMARY');
+      } else {
+        print('GAGAL LOAD INVESTMENT SUMMARY: ${response.body}');
+      }
+    } catch (e) {
+      print('ERROR FETCH INVESTMENT SUMMARY: $e');
+    }
+  }
+
+  Future<void> fetchPortfolio() async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return;
+    }
+
+    _isLoadingInvestment = true;
+    notifyListeners();
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8000/investment/portfolio'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      print('INVESTMENT PORTFOLIO STATUS: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> body = jsonDecode(response.body);
+        
+        final List<dynamic> investmentsJson = body['investments'] ?? [];
+        _investments = investmentsJson.map((item) => Investment.fromJson(item)).toList();
+        
+        if (body['summary'] != null) {
+          _investmentSummary = InvestmentSummary.fromJson(body['summary']);
+        }
+        
+        notifyListeners();
+        print('BERHASIL LOAD PORTFOLIO: ${_investments.length} INVESTMENTS');
+      } else {
+        print('GAGAL LOAD PORTFOLIO: ${response.body}');
+      }
+    } catch (e) {
+      print('ERROR FETCH PORTFOLIO: $e');
+    } finally {
+      _isLoadingInvestment = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> createInvestment(String name, String symbol, String type, double quantity, double averageCost, double currentPrice, String exchange) async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return false;
+    }
+
+    final backendType = type.toLowerCase() == 'saham' ? 'stock' : type.toLowerCase();
+
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8000/investment/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'name': name,
+          'symbol': symbol.toUpperCase(),
+          'type': backendType,
+          'quantity': quantity,
+          'average_cost': averageCost,
+          'current_price': currentPrice,
+          'currency': 'IDR',
+          'exchange': exchange,
+          'is_active': true,
+        }),
+      );
+
+      print('CREATE INVESTMENT STATUS: ${response.statusCode}');
+      print('CREATE INVESTMENT BODY: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print('INVESTASI BERHASIL DITAMBAHKAN');
+        await fetchInvestments();
+        await fetchInvestmentSummary();
+        return true;
+      } else {
+        print('Gagal menambahkan investasi: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('ERROR CREATE INVESTMENT: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteInvestment(String id) async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return false;
+    }
+
+    try {
+      final response = await http.delete(
+        Uri.parse('http://localhost:8000/investment/$id'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      print('DELETE INVESTMENT STATUS: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        print('INVESTASI BERHASIL DIHAPUS');
+        await fetchInvestments();
+        await fetchInvestmentSummary();
+        return true;
+      } else {
+        print('Gagal menghapus investasi: ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('ERROR DELETE INVESTMENT: $e');
+      return false;
+    }
   }
 }

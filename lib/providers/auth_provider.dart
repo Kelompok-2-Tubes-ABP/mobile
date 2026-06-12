@@ -39,6 +39,8 @@ class AuthProvider with ChangeNotifier {
 
         print('TOKEN BERHASIL DISIMPAN');
 
+        await getProfile();
+
         notifyListeners();
         return true;
       }
@@ -47,6 +49,52 @@ class AuthProvider with ChangeNotifier {
       return false;
     } catch (e) {
       print('Error login: $e');
+      return false;
+    }
+  }
+
+  Future<bool> tryAutoLogin() async {
+    final token = await storage.read(key: 'token');
+    if (token == null) {
+      return false;
+    }
+
+    final expiresAtStr = await storage.read(key: 'expires_at');
+    if (expiresAtStr != null) {
+      final expiresAt = DateTime.parse(expiresAtStr);
+      if (expiresAt.isBefore(DateTime.now())) {
+        print('TOKEN EXPIRED');
+        await logout();
+        return false;
+      }
+    }
+
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:8000/profile/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      print('AUTO LOGIN PROFILE STATUS: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _currentUser = User(
+          name: data['Message']['username'],
+          email: data['Message']['email'],
+          id: '',
+        );
+        notifyListeners();
+        return true;
+      } else {
+        await logout();
+        return false;
+      }
+    } catch (e) {
+      print('Error auto login profile: $e');
       return false;
     }
   }

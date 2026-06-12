@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/finance_provider.dart';
 
 import '../home/home_screen.dart';
 import '../transaction/transaction_screen.dart';
@@ -15,6 +17,20 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    final financeProvider = context.read<FinanceProvider>();
+    Future.microtask(() async {
+      await financeProvider.fetchTransactions();
+      await financeProvider.fetchBudgets();
+      await financeProvider.fetchQuickStats();
+      await financeProvider.fetchSavingsGoals();
+      await financeProvider.fetchSavingsGoalSummary();
+      await financeProvider.fetchPortfolio();
+    });
+  }
 
   void _onNavigate(int index) {
     setState(() {

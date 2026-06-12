@@ -125,35 +125,6 @@ class AppDrawer extends StatelessWidget {
             'Pengaturan',
             index: 5,
           ),
-
-          const SizedBox(height: 20),
-          // Menus
-          _buildDrawerItem(
-            context,
-            Icons.dashboard_customize,
-            'Dashboard',
-            index: 0,
-          ),
-          _buildDrawerItem(
-            context,
-            Icons.account_balance_wallet_outlined,
-            'Transaksi',
-            index: 1,
-          ),
-          _buildDrawerItem(context, Icons.show_chart, 'Budget', index: 2),
-          _buildDrawerItem(context, Icons.trending_up, 'Investasi', index: 3),
-          _buildDrawerItem(
-            context,
-            Icons.chat_bubble_outline,
-            'AI Chatbot',
-            index: 0,
-          ),
-          _buildDrawerItem(
-            context,
-            Icons.settings_outlined,
-            'Pengaturan',
-            index: 4,
-          ),
         ],
       ),
     );

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme.dart';
-import '../../models/investment.dart';
 import '../../providers/finance_provider.dart';
 
 class AddInvestmentModal extends StatefulWidget {
@@ -20,6 +19,7 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
   final TextEditingController _currentPriceController = TextEditingController();
   final TextEditingController _platformController = TextEditingController();
   String selectedType = 'saham'; // Default type
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -152,7 +152,7 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
             const SizedBox(height: 8),
             TextField(
               controller: _profitController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
                 hintText: 'Contoh: 15.5 atau -5.2',
               ),
@@ -175,7 +175,7 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _saveInvestment,
+                onPressed: _isLoading ? null : _saveInvestment,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryColor,
                   foregroundColor: Colors.white,
@@ -184,7 +184,16 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Text('Simpan Portofolio'),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text('Simpan Portofolio'),
               ),
             ),
           ],
@@ -224,30 +233,64 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
     );
   }
 
-  void _saveInvestment() {
+  void _saveInvestment() async {
     final amount = double.tryParse(_amountController.text) ?? 0;
-    final profit = double.tryParse(_profitController.text) ?? 0;
     final avgCost = double.tryParse(_avgCostController.text) ?? 0;
     final currentPrice = double.tryParse(_currentPriceController.text) ?? 0;
     
-    if (amount <= 0 || _nameController.text.isEmpty || _symbolController.text.isEmpty) return;
+    if (amount <= 0 || _nameController.text.isEmpty || _symbolController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Harap isi Jumlah Investasi, Nama Aset, dan Simbol')),
+      );
+      return;
+    }
 
-    final newInvestment = Investment(
-      id: DateTime.now().toString(),
-      name: _nameController.text,
-      symbol: _symbolController.text,
-      type: selectedType,
-      amount: amount,
-      profitPercentage: profit,
-      icon: selectedType == 'crypto' ? Icons.currency_bitcoin : Icons.trending_up,
-      color: selectedType == 'crypto' ? Colors.orange : Colors.blue,
-      platform: _platformController.text.isEmpty ? 'Binance' : _platformController.text,
-      holdings: amount / (currentPrice > 0 ? currentPrice : 1), // Rough estimate if not provided
-      avgCost: avgCost,
-      currentPrice: currentPrice,
-    );
+    setState(() {
+      _isLoading = true;
+    });
 
-    context.read<FinanceProvider>().addInvestment(newInvestment);
-    Navigator.pop(context);
+    final name = _nameController.text;
+    final symbol = _symbolController.text;
+    final type = selectedType;
+    final quantity = amount / (currentPrice > 0 ? currentPrice : (avgCost > 0 ? avgCost : 1.0));
+    final exchange = _platformController.text.isEmpty ? 'Binance' : _platformController.text;
+
+    try {
+      final financeProvider = context.read<FinanceProvider>();
+      final success = await financeProvider.createInvestment(
+        name,
+        symbol,
+        type,
+        quantity,
+        avgCost,
+        currentPrice,
+        exchange,
+      );
+
+      if (success) {
+        await financeProvider.fetchPortfolio();
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal menyimpan investasi ke server')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 }

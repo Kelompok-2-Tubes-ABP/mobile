@@ -142,7 +142,7 @@ class BudgetScreen extends StatelessWidget {
           const SizedBox(height: 24),
           
           // Category Budgets
-          ...budgets.map((budget) => _buildBudgetCard(context, budget)).toList(),
+          ...budgets.map((budget) => _buildBudgetCard(context, budget)),
         ],
       ),
       floatingActionButton: Builder(

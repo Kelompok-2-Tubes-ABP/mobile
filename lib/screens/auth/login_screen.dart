@@ -35,7 +35,11 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login gagal. Periksa kembali email dan password Anda.')),
+        const SnackBar(
+          content: Text(
+            'Login gagal. Periksa kembali email dan password Anda.',
+          ),
+        ),
       );
     }
   }
@@ -64,11 +68,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   color: AppTheme.primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Icon(Icons.account_balance_wallet, size: 48, color: AppTheme.primaryColor),
+                child: const Icon(
+                  Icons.account_balance_wallet,
+                  size: 48,
+                  color: AppTheme.primaryColor,
+                ),
               ),
               const SizedBox(height: 24),
               Text(
-                'Selamat Datang\nKembali 👋',
+                'Selamat Datang\nKembali ',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
                   fontWeight: FontWeight.bold,
@@ -78,9 +86,9 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               Text(
                 'Masuk ke akun FinanceApp kamu',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: AppTheme.textSecondary,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: AppTheme.textSecondary),
               ),
               const SizedBox(height: 40),
               TextField(
@@ -99,7 +107,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   hintText: 'Password',
                   prefixIcon: const Icon(Icons.lock_outline),
                   suffixIcon: IconButton(
-                    icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                    ),
                     onPressed: () {
                       setState(() => _obscurePassword = !_obscurePassword);
                     },
@@ -112,15 +124,27 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Row(
                     children: [
-                      Checkbox(value: true, onChanged: (val) {}, activeColor: AppTheme.primaryColor),
+                      Checkbox(
+                        value: true,
+                        onChanged: (val) {},
+                        activeColor: AppTheme.primaryColor,
+                      ),
                       const Text('Ingat saya'),
                     ],
                   ),
                   TextButton(
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ForgotPasswordScreen()));
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordScreen(),
+                        ),
+                      );
                     },
-                    child: const Text('Lupa password?', style: TextStyle(color: AppTheme.primaryColor)),
+                    child: const Text(
+                      'Lupa password?',
+                      style: TextStyle(color: AppTheme.primaryColor),
+                    ),
                   ),
                 ],
               ),
@@ -129,8 +153,15 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleLogin,
-                  child: _isLoading 
-                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : const Text('Masuk'),
                 ),
               ),
@@ -138,12 +169,26 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Belum punya akun? ', style: TextStyle(color: AppTheme.textSecondary)),
+                  Text(
+                    'Belum punya akun? ',
+                    style: TextStyle(color: AppTheme.textSecondary),
+                  ),
                   GestureDetector(
                     onTap: () {
-                      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const RegisterScreen()));
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RegisterScreen(),
+                        ),
+                      );
                     },
-                    child: const Text('Daftar', style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Daftar',
+                      style: TextStyle(
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
