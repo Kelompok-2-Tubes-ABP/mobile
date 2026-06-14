@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/finance_provider.dart';
 import '../../models/user.dart';
+import 'edit_profile.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -60,7 +61,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 20),
 
                     // ================= PROFILE CARD =================
-                    _buildProfileCard(user),
+                    _buildProfileCard(context, user),
 
                     const SizedBox(height: 20),
 
@@ -119,7 +120,11 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               onPressed: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Fitur ubah profil belum diimplementasikan')),
+                                  const SnackBar(
+                                    content: Text(
+                                      'Fitur ubah profil belum diimplementasikan',
+                                    ),
+                                  ),
                                 );
                               },
                               child: const Text(
@@ -165,7 +170,11 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               onPressed: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Fitur ganti password belum diimplementasikan')),
+                                  const SnackBar(
+                                    content: Text(
+                                      'Fitur ganti password belum diimplementasikan',
+                                    ),
+                                  ),
                                 );
                               },
                               child: const Text(
@@ -215,7 +224,11 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             onPressed: () {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Fitur hapus akun belum diimplementasikan')),
+                                const SnackBar(
+                                  content: Text(
+                                    'Fitur hapus akun belum diimplementasikan',
+                                  ),
+                                ),
                               );
                             },
                             child: const Text(
@@ -239,7 +252,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   // ================= PROFILE CARD =================
-  Widget _buildProfileCard(User? user) {
+  Widget _buildProfileCard(BuildContext context, User? user) {
     final name = user?.name ?? 'Guest';
     final email = user?.email ?? 'guest@financeapp.com';
     final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'G';
@@ -274,15 +287,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     color: Color(0xff10B981),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.add,
-                    color: Colors.white,
-                    size: 18,
-                  ),
+                  child: const Icon(Icons.add, color: Colors.white, size: 18),
                 ),
               ),
             ],
           ),
+
           const SizedBox(height: 14),
 
           Text(
@@ -293,30 +303,40 @@ class _ProfilePageState extends State<ProfilePage> {
               color: Color(0xff1E293B),
             ),
           ),
+
           const SizedBox(height: 6),
 
           Text(
             email,
-            style: const TextStyle(
-              color: Color(0xff64748B),
-              fontSize: 16,
-            ),
+            style: const TextStyle(color: Color(0xff64748B), fontSize: 16),
           ),
+
           const SizedBox(height: 20),
 
           OutlinedButton(
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xff4F46E5),
               side: const BorderSide(color: Color(0xff4F46E5)),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 26,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-            onPressed: () {},
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EditProfilePage(
+                    currentUsername: name,
+                    currentEmail: email,
+                  ),
+                ),
+              );
+
+              if (result == true) {
+                _fetchProfile();
+              }
+            },
             child: const Text('Edit Profil'),
           ),
         ],
@@ -344,10 +364,7 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: Color(0xff64748B),
-                  fontSize: 14,
-                ),
+                style: const TextStyle(color: Color(0xff64748B), fontSize: 14),
               ),
               const SizedBox(height: 4),
               Text(
