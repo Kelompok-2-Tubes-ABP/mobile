@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/theme.dart';
 import 'login_screen.dart';
+import 'email_verif.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -32,15 +33,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final confirmPassword = confirmPasswordController.text;
 
     if (username.isEmpty || email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Semua field wajib diisi')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Semua field wajib diisi')));
       return;
     }
 
     if (password != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password dan konfirmasi password tidak cocok')),
+        const SnackBar(
+          content: Text('Password dan konfirmasi password tidak cocok'),
+        ),
       );
       return;
     }
@@ -60,20 +63,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pendaftaran berhasil! Silakan masuk.')),
+          const SnackBar(
+            content: Text(
+              'Pendaftaran berhasil! Silakan verifikasi email Anda.',
+            ),
+          ),
         );
-        Navigator.pop(context);
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => EmailVerificationPage(email: email),
+          ),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Pendaftaran gagal. Silakan coba lagi.')),
+          const SnackBar(
+            content: Text('Pendaftaran gagal. Silakan coba lagi.'),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -211,7 +226,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: (_agreeToTerms && !_isLoading) ? _handleRegister : null,
+                  onPressed: (_agreeToTerms && !_isLoading)
+                      ? _handleRegister
+                      : null,
                   child: _isLoading
                       ? const SizedBox(
                           height: 20,
