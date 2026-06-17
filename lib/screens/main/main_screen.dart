@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/finance_provider.dart';
+import '../../providers/notification_provider.dart';
 
 import '../home/home_screen.dart';
 import '../transaction/transaction_screen.dart';
@@ -29,6 +30,7 @@ class _MainScreenState extends State<MainScreen> {
       await financeProvider.fetchSavingsGoals();
       await financeProvider.fetchSavingsGoalSummary();
       await financeProvider.fetchPortfolio();
+      context.read<NotificationProvider>().fetchNotifications(unreadOnly: true);
     });
   }
 

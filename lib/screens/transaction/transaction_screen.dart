@@ -18,8 +18,6 @@ class TransactionScreen extends StatefulWidget {
 class _TransactionScreenState extends State<TransactionScreen> {
   String selectedMonth = 'Mei';
   String selectedCategory = 'All';
-  bool _isSearching = false;
-  final TextEditingController _searchController = TextEditingController();
 
   final List<String> months = [
     'Jan',
@@ -70,44 +68,8 @@ class _TransactionScreenState extends State<TransactionScreen> {
       backgroundColor: AppTheme.backgroundColor,
       drawer: const AppDrawer(currentIndex: 1),
       appBar: AppBar(
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                style: const TextStyle(color: AppTheme.textPrimary),
-                decoration: const InputDecoration(
-                  hintText: 'Cari transaksi...',
-                  hintStyle: TextStyle(color: AppTheme.textSecondary),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  fillColor: Colors.transparent,
-                ),
-                onChanged: (val) {
-                  setState(() {});
-                },
-              )
-            : const Text('Transaksi'),
+        title: const Text('Transaksi'),
         actions: [
-          _isSearching
-              ? IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    setState(() {
-                      _isSearching = false;
-                      _searchController.clear();
-                    });
-                  },
-                )
-              : IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: () {
-                    setState(() {
-                      _isSearching = true;
-                    });
-                  },
-                ),
-          IconButton(icon: const Icon(Icons.filter_list), onPressed: () {}),
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: ElevatedButton.icon(
@@ -260,6 +222,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 
   void _showAddTransaction(BuildContext context) {
+    print('TRANSACTION SCREEN MONTH: $selectedMonth');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -327,14 +290,11 @@ class _TransactionScreenState extends State<TransactionScreen> {
       print('${tx.title} => ${tx.date} => month ${tx.date.month}');
     }
 
-    final searchQuery = _searchController.text.toLowerCase();
     List<t.Transaction> filtered = transactions.where((tx) {
       final matchesMonth = tx.date.month == selectedMonthNumber;
       final matchesCategory = selectedCategory == 'All' || tx.category == selectedCategory;
-      final matchesSearch = searchQuery.isEmpty ||
-          tx.title.toLowerCase().contains(searchQuery) ||
-          tx.category.toLowerCase().contains(searchQuery);
-      return matchesMonth && matchesCategory && matchesSearch;
+      print('FILTERED MONTH CHECK: tx.date.month=${tx.date.month} vs selectedMonthNumber=$selectedMonthNumber => $matchesMonth');
+      return matchesMonth && matchesCategory;
     }).toList();
 
     if (filtered.isEmpty) {

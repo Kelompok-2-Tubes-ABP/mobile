@@ -6,6 +6,7 @@ import '../../providers/finance_provider.dart';
 import '../../models/investment.dart';
 import '../../widgets/app_drawer.dart';
 import 'add_investment_modal.dart';
+import 'buy_investment_modal.dart';
 
 class InvestmentScreen extends StatefulWidget {
   const InvestmentScreen({super.key});
@@ -32,7 +33,9 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Hapus Investasi'),
-        content: Text('Apakah Anda yakin ingin menghapus investasi ${item.name} (${item.symbol})?'),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus investasi ${item.name} (${item.symbol})?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -52,9 +55,7 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (ctx) => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        builder: (ctx) => const Center(child: CircularProgressIndicator()),
       );
 
       try {
@@ -62,7 +63,7 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
         final success = await financeProvider.deleteInvestment(item.id);
         if (!mounted) return;
         Navigator.pop(context); // Pop loading dialog
-        
+
         if (success) {
           await financeProvider.fetchPortfolio();
           if (!mounted) return;
@@ -71,15 +72,17 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Gagal menghapus investasi dari server')),
+            const SnackBar(
+              content: Text('Gagal menghapus investasi dari server'),
+            ),
           );
         }
       } catch (e) {
         if (!mounted) return;
         Navigator.pop(context); // Pop loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -89,9 +92,28 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
     final financeData = context.watch<FinanceProvider>();
     final allInvestments = financeData.investments;
 
+    // Temporary print logging to observe actual symbol and type values
+    for (var item in allInvestments) {
+      print("INVESTMENT SYMBOL: ${item.symbol}");
+      print("INVESTMENT TYPE RAW: ${item.type}");
+    }
+
     List<Investment> filteredInvestments = allInvestments;
     if (selectedFilter != 'Semua') {
-      filteredInvestments = allInvestments.where((item) => item.type.toLowerCase() == selectedFilter.toLowerCase()).toList();
+      filteredInvestments = allInvestments
+          .where(
+            (item) {
+              final itemType = item.type.toLowerCase();
+              final filterType = selectedFilter.toLowerCase();
+              if (filterType == 'saham') {
+                return itemType == 'saham' || itemType == 'stock';
+              } else if (filterType == 'crypto') {
+                return itemType == 'crypto';
+              }
+              return itemType == filterType;
+            },
+          )
+          .toList();
     }
 
     double totalValue;
@@ -99,26 +121,28 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
     double totalProfitPercentage;
     bool isPositive;
 
-    if (selectedFilter == 'Semua' && financeData.investmentSummary.totalValue > 0) {
+    if (selectedFilter == 'Semua' &&
+        financeData.investmentSummary.totalValue > 0) {
       totalValue = financeData.investmentSummary.totalValue;
       totalProfit = financeData.investmentSummary.gainLoss;
       totalProfitPercentage = financeData.investmentSummary.gainLossPercent;
       isPositive = totalProfitPercentage >= 0;
     } else {
-      totalValue = filteredInvestments.fold(0, (sum, item) => sum + item.amount);
-      totalProfit = 0;
-      double initialValue = 0;
-      for(var item in filteredInvestments) {
-        double profitAmount = 0;
-        if (item.profitPercentage != -100) {
-          profitAmount = item.amount - (item.amount / (1 + (item.profitPercentage / 100)));
-        } else {
-          profitAmount = -item.amount;
-        }
-        totalProfit += profitAmount;
-        initialValue += (item.amount / (1 + (item.profitPercentage / 100)));
-      }
-      totalProfitPercentage = initialValue > 0 ? (totalProfit / initialValue) * 100 : 0;
+      totalValue = filteredInvestments.fold(
+        0.0,
+        (sum, item) => sum + item.amount,
+      );
+      totalProfit = filteredInvestments.fold(
+        0.0,
+        (sum, item) => sum + item.gainLoss,
+      );
+      final double totalCost = filteredInvestments.fold(
+        0.0,
+        (sum, item) => sum + item.totalCost,
+      );
+      totalProfitPercentage = totalCost > 0
+          ? (totalProfit / totalCost) * 100
+          : 0.0;
       isPositive = totalProfitPercentage >= 0;
     }
 
@@ -128,7 +152,10 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
       appBar: AppBar(
         title: const Text('Portofolio'),
         actions: [
-          IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}),
+          IconButton(
+            icon: const Icon(Icons.notifications_none),
+            onPressed: () {},
+          ),
         ],
       ),
       body: financeData.isLoadingInvestment && allInvestments.isEmpty
@@ -157,17 +184,27 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Total Portofolio', style: TextStyle(color: AppTheme.textSecondary)),
+                              const Text(
+                                'Total Portofolio',
+                                style: TextStyle(color: AppTheme.textSecondary),
+                              ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: isPositive ? AppTheme.success.withOpacity(0.1) : AppTheme.danger.withOpacity(0.1),
+                                  color: isPositive
+                                      ? AppTheme.success.withOpacity(0.1)
+                                      : AppTheme.danger.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
                                   '${isPositive ? '+' : ''}${totalProfitPercentage.toStringAsFixed(2)}%',
                                   style: TextStyle(
-                                    color: isPositive ? AppTheme.success : AppTheme.danger,
+                                    color: isPositive
+                                        ? AppTheme.success
+                                        : AppTheme.danger,
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -178,43 +215,24 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
                           const SizedBox(height: 8),
                           Text(
                             CurrencyFormat.convertToIdr(totalValue),
-                            style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 32,
-                            ),
+                            style: Theme.of(context).textTheme.displayMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 32,
+                                ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '${totalProfit >= 0 ? '+' : ''}${CurrencyFormat.convertToIdr(totalProfit)}',
                             style: TextStyle(
-                              color: isPositive ? AppTheme.success : AppTheme.danger,
+                              color: isPositive
+                                  ? AppTheme.success
+                                  : AppTheme.danger,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           const SizedBox(height: 32),
-                          
-                          // Bar Chart (Custom Row of Bars like HomeScreen)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: List.generate(15, (index) {
-                              double height = 30.0 + (index * 5) + (index % 4 * 10);
-                              if (height > 120) height = 120;
-                              return Container(
-                                width: 15,
-                                height: height,
-                                decoration: BoxDecoration(
-                                  color: isPositive ? AppTheme.success.withOpacity(0.3) : AppTheme.danger.withOpacity(0.3),
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(4),
-                                    topRight: Radius.circular(4),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
-                          const SizedBox(height: 24),
-                          
+
                           // Add Button below chart
                           SizedBox(
                             width: double.infinity,
@@ -224,26 +242,32 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
                                   context: context,
                                   isScrollControlled: true,
                                   backgroundColor: Colors.transparent,
-                                  builder: (context) => const AddInvestmentModal(),
+                                  builder: (context) =>
+                                      const AddInvestmentModal(),
                                 );
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppTheme.primaryColor,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                               icon: const Icon(Icons.add, size: 20),
-                              label: const Text('Tambah Data Portofolio', style: TextStyle(fontWeight: FontWeight.bold)),
+                              label: const Text(
+                                'Tambah Data Portofolio',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Filters
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -258,7 +282,7 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    
+
                     // Assets List
                     filteredInvestments.isEmpty
                         ? const Padding(
@@ -294,7 +318,7 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
             backgroundColor: AppTheme.primaryColor,
             child: const Icon(Icons.add, color: Colors.white),
           );
-        }
+        },
       ),
     );
   }
@@ -325,12 +349,7 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
 
   Widget _buildAssetCard(Investment item) {
     bool isPositive = item.profitPercentage >= 0;
-    double profitAmount = 0;
-    if (item.profitPercentage != -100) {
-      profitAmount = item.amount - (item.amount / (1 + (item.profitPercentage / 100)));
-    } else {
-      profitAmount = -item.amount;
-    }
+    double profitAmount = item.gainLoss;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -367,61 +386,184 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
                   children: [
                     Row(
                       children: [
-                        Text(item.symbol, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text(
+                          item.symbol,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: item.type.toLowerCase() == 'crypto'
+                                ? Colors.orange.withOpacity(0.1)
+                                : Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            item.type.toLowerCase() == 'crypto' ? 'Crypto' : 'Saham',
+                            style: TextStyle(
+                              color: item.type.toLowerCase() == 'crypto'
+                                  ? Colors.orange.shade800
+                                  : Colors.blue.shade800,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Text(item.platform, style: TextStyle(color: Colors.grey.shade600, fontSize: 10, fontWeight: FontWeight.bold)),
+                          child: Text(
+                            item.platform,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.circle, color: AppTheme.success, size: 8),
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.circle,
+                          color: AppTheme.success,
+                          size: 8,
+                        ),
                         const SizedBox(width: 4),
-                        const Text('LIVE', style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.bold)),
+                        const Text(
+                          'LIVE',
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 2),
-                    Text(item.name, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                    Text(
+                      item.name,
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
                     '${isPositive ? '+' : ''}${CurrencyFormat.convertToIdr(profitAmount)}',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: isPositive ? AppTheme.success : AppTheme.danger, fontSize: 14),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isPositive ? AppTheme.success : AppTheme.danger,
+                      fontSize: 14,
+                    ),
                   ),
                   Text(
                     '${isPositive ? '+' : ''}${item.profitPercentage.toStringAsFixed(2)}%',
-                    style: TextStyle(color: isPositive ? AppTheme.success : AppTheme.danger, fontSize: 12, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: isPositive ? AppTheme.success : AppTheme.danger,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(width: 8),
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                icon: const Icon(Icons.delete_outline, color: AppTheme.danger, size: 22),
-                onPressed: () => _confirmDeleteInvestment(item),
-              ),
             ],
           ),
           const SizedBox(height: 20),
           const Divider(height: 1, color: Color(0xFFF3F4F6)),
           const SizedBox(height: 16),
-          
+
           // Details Rows
+          _buildDetailRow('Type', item.type.toLowerCase() == 'crypto' ? 'Crypto' : 'Saham'),
+          const SizedBox(height: 12),
           _buildDetailRow('Holdings', '${item.holdings} ${item.symbol}'),
           const SizedBox(height: 12),
           _buildDetailRow('Value', CurrencyFormat.convertToIdr(item.amount)),
           const SizedBox(height: 12),
-          _buildDetailRow('Avg Cost', CurrencyFormat.convertToIdr(item.avgCost)),
+          _buildDetailRow(
+            'Avg Cost',
+            CurrencyFormat.convertToIdr(item.avgCost),
+          ),
           const SizedBox(height: 12),
-          _buildDetailRow('Current', CurrencyFormat.convertToIdr(item.currentPrice), isPrice: true),
+          _buildDetailRow(
+            'Current',
+            CurrencyFormat.convertToIdr(item.currentPrice),
+            isPrice: true,
+          ),
+          const SizedBox(height: 12),
+          _buildDetailRow(
+            'Profit/Loss',
+            '${profitAmount >= 0 ? '+' : ''}${CurrencyFormat.convertToIdr(profitAmount)} (${profitAmount >= 0 ? '+' : ''}${item.profitPercentage.toStringAsFixed(2)}%)',
+          ),
+
+          const SizedBox(height: 20),
+          const Divider(height: 1, color: Color(0xFFF3F4F6)),
+          const SizedBox(height: 16),
+
+          // Action Buttons Row (Buy Investment & Delete)
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) => BuyInvestmentModal(investment: item),
+                    );
+                  },
+                  icon: const Icon(Icons.shopping_cart, size: 16),
+                  label: const Text('Buy Investment'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.success,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _confirmDeleteInvestment(item),
+                  icon: const Icon(Icons.delete_outline, size: 16),
+                  label: const Text('Delete'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.danger.withOpacity(0.1),
+                    foregroundColor: AppTheme.danger,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -431,14 +573,24 @@ class _InvestmentScreenState extends State<InvestmentScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+        Text(
+          label,
+          style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+        ),
         Row(
           children: [
-            Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: AppTheme.textPrimary)),
+            Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+                color: AppTheme.textPrimary,
+              ),
+            ),
             if (isPrice) ...[
               const SizedBox(width: 4),
               const Icon(Icons.trending_up, color: AppTheme.success, size: 16),
-            ]
+            ],
           ],
         ),
       ],

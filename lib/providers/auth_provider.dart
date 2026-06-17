@@ -163,6 +163,42 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Map<String, dynamic>> changePassword(String currentPassword, String newPassword) async {
+    final token = await storage.read(key: 'token');
+    if (token == null) {
+      return {'success': false, 'message': 'Token tidak ditemukan'};
+    }
+
+    final url = Uri.parse('http://localhost:8000/profile/change-password');
+    try {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        }),
+      );
+
+      print('CHANGE PASSWORD STATUS: ${response.statusCode}');
+      print('CHANGE PASSWORD BODY: ${response.body}');
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        return {'success': true, 'message': data['message'] ?? 'Password berhasil diubah'};
+      } else {
+        return {'success': false, 'message': data['error'] ?? 'Gagal mengubah password'};
+      }
+    } catch (e) {
+      print('Error change password: $e');
+      return {'success': false, 'message': 'Terjadi kesalahan: $e'};
+    }
+  }
+
+
   Future<bool> register(
     String username,
     String email,

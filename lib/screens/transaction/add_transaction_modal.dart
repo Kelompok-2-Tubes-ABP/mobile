@@ -34,8 +34,14 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     if (targetMonth == now.month) {
       selectedDate = now;
     } else {
-      selectedDate = DateTime(now.year, targetMonth, 1);
+      selectedDate = DateTime(now.year, targetMonth, 1, 12, 0, 0);
     }
+
+    print('ADD MODAL RECEIVED MONTH: ${widget.selectedMonth}');
+    print('MONTH MAP RESULT: $targetMonth');
+    print('DATE GENERATED LOCAL: ${selectedDate.toIso8601String()}');
+    print('DATE GENERATED UTC: ${selectedDate.toUtc().toIso8601String()}');
+    print('YEAR: ${selectedDate.year}, MONTH: ${selectedDate.month}, DAY: ${selectedDate.day}');
   }
 
   void _selectDate() async {
@@ -45,9 +51,9 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
     );
-    if (picked != null && picked != selectedDate) {
+    if (picked != null) {
       setState(() {
-        selectedDate = picked;
+        selectedDate = DateTime(picked.year, picked.month, picked.day, 12, 0, 0);
       });
     }
   }
@@ -412,6 +418,11 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
     );
 
     final financeProvider = context.read<FinanceProvider>();
+    print('SEBELUM CREATE:');
+    print('SELECTED DATE: $selectedDate');
+    print('SELECTED YEAR: ${selectedDate.year}');
+    print('SELECTED MONTH: ${selectedDate.month}');
+    print('SELECTED DAY: ${selectedDate.day}');
 
     // Tampilkan loading dialog
     showDialog(

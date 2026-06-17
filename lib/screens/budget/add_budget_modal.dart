@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../providers/finance_provider.dart';
+import '../../models/budget.dart';
 
 
 class AddBudgetModal extends StatefulWidget {
-  const AddBudgetModal({super.key});
+  final Budget? budgetToEdit;
+
+  const AddBudgetModal({super.key, this.budgetToEdit});
 
   @override
   State<AddBudgetModal> createState() => _AddBudgetModalState();
@@ -14,6 +17,8 @@ class AddBudgetModal extends StatefulWidget {
 class _AddBudgetModalState extends State<AddBudgetModal> {
   final TextEditingController _amountController = TextEditingController();
   String selectedCategory = 'Makanan';
+
+  bool get isEditMode => widget.budgetToEdit != null;
 
   final List<Map<String, dynamic>> categories = [
     {'name': 'Makanan', 'icon': Icons.restaurant, 'color': Colors.orange},
@@ -24,6 +29,15 @@ class _AddBudgetModalState extends State<AddBudgetModal> {
     {'name': 'Hiburan', 'icon': Icons.sports_esports, 'color': Colors.deepPurple},
     {'name': 'Lainnya', 'icon': Icons.category, 'color': Colors.blueGrey},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    if (isEditMode) {
+      selectedCategory = widget.budgetToEdit!.category;
+      _amountController.text = widget.budgetToEdit!.limit.toInt().toString();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,9 +69,9 @@ class _AddBudgetModalState extends State<AddBudgetModal> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Tambah Budget',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Text(
+                  isEditMode ? 'Edit Budget' : 'Tambah Budget',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -157,7 +171,7 @@ class _AddBudgetModalState extends State<AddBudgetModal> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Text('Simpan Budget'),
+                child: Text(isEditMode ? 'Perbarui Budget' : 'Simpan Budget'),
               ),
             ),
           ],
@@ -170,26 +184,56 @@ class _AddBudgetModalState extends State<AddBudgetModal> {
     final amount = double.tryParse(_amountController.text) ?? 0;
     if (amount <= 0) return;
 
-    // Tampilkan dialog loading
+    // Show loading dialog
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    context.read<FinanceProvider>().createCategoryBudget(selectedCategory, amount).then((success) {
-      if (!mounted) return;
-      Navigator.pop(context); // Tutup dialog loading
-      if (success) {
-        Navigator.pop(context); // Tutup modal add budget
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Budget berhasil disimpan')),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal menyimpan budget')),
-        );
-      }
-    });
+    final financeProvider = context.read<FinanceProvider>();
+
+    if (isEditMode) {
+      financeProvider.updateCategoryBudget(
+        widget.budgetToEdit!.id,
+        selectedCategory,
+        amount,
+        financeProvider.selectedMonth,
+      ).then((success) {
+        if (!mounted) return;
+        Navigator.pop(context); // Close loading dialog
+        if (success) {
+          Navigator.pop(context); // Close modal
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Budget berhasil diperbarui'),
+              backgroundColor: AppTheme.success,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Gagal memperbarui budget'),
+              backgroundColor: AppTheme.danger,
+            ),
+          );
+        }
+      });
+    } else {
+      financeProvider.createCategoryBudget(selectedCategory, amount).then((success) {
+        if (!mounted) return;
+        Navigator.pop(context); // Close loading dialog
+        if (success) {
+          Navigator.pop(context); // Close modal
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Budget berhasil disimpan')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal menyimpan budget')),
+          );
+        }
+      });
+    }
   }
 }

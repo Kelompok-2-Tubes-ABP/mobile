@@ -22,7 +22,14 @@ class Transaction {
   });
 
   factory Transaction.fromApiJson(Map<String, dynamic> json) {
+    print("TRANSACTION RAW JSON: $json");
+    print("TRANSACTION ID: ${json['id']}");
+    print("TRANSACTION TYPE: ${json['type']}");
+    print("TRANSACTION DATE: ${json['date']}");
+    
     final category = (json['category'] ?? '').toString().toLowerCase();
+    final parsedDate = DateTime.parse(json['date']).toLocal();
+    print("TRANSACTION MONTH: ${parsedDate.month}");
 
     return Transaction(
       id: json['id'] ?? '',
@@ -35,9 +42,9 @@ class Transaction {
 
       category: json['category'] ?? '-',
 
-      date: DateTime.parse(json['date']),
+      date: parsedDate,
 
-      time: DateTime.parse(json['date']).toLocal().toString().substring(11, 16),
+      time: parsedDate.toString().substring(11, 16),
 
       paymentMethod: '-',
     );

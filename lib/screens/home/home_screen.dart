@@ -8,13 +8,20 @@ import '../../models/transaction.dart' as t;
 import '../../models/savings_goal.dart';
 import '../../widgets/app_drawer.dart';
 import '../notifications/notif.dart';
+import '../../providers/notification_provider.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final Function(int)? onNavigate;
 
-  HomeScreen({super.key, this.onNavigate});
+  const HomeScreen({super.key, this.onNavigate});
 
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _isObscured = false;
 
   @override
   Widget build(BuildContext context) {
@@ -22,10 +29,21 @@ class HomeScreen extends StatelessWidget {
     final authData = context.watch<AuthProvider>();
     final user = authData.currentUser;
 
+    print("TOTAL INCOME: ${financeData.quickStats.monthIncome}");
+    print("TOTAL EXPENSE: ${financeData.quickStats.monthSpending}");
+    print("NET BALANCE: ${financeData.quickStats.netWorth}");
+    
+    final double totalSaldo = financeData.quickStats.monthIncome - financeData.quickStats.monthSpending;
+    print("FLUTTER: nilai yang dipakai widget Total Saldo = $totalSaldo");
+
+    for (var tx in financeData.transactions) {
+      print("TX TITLE: ${tx.title} TYPE: ${tx.type} AMOUNT: ${tx.amount}");
+    }
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppTheme.backgroundColor,
-      drawer: AppDrawer(onNavigate: onNavigate, currentIndex: 0),
+      drawer: AppDrawer(onNavigate: widget.onNavigate, currentIndex: 0),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -73,25 +91,30 @@ class HomeScreen extends StatelessWidget {
                           MaterialPageRoute(builder: (_) => const NotifPage()),
                         );
                       },
-                      child: Stack(
-                        children: [
-                          const Icon(Icons.notifications_none, size: 32),
-                          Positioned(
-                            right: 2,
-                            top: 2,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: AppTheme.danger,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Text(
-                                '3',
-                                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          )
-                        ],
+                      child: Consumer<NotificationProvider>(
+                        builder: (context, notifProvider, child) {
+                          return Stack(
+                            children: [
+                              const Icon(Icons.notifications_none, size: 32),
+                              if (notifProvider.unreadCount > 0)
+                                Positioned(
+                                  right: 2,
+                                  top: 2,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: AppTheme.danger,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      notifProvider.unreadCount > 9 ? '9+' : notifProvider.unreadCount.toString(),
+                                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                )
+                            ],
+                          );
+                        },
                       ),
                     )
                   ],
@@ -116,12 +139,23 @@ class HomeScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           const Text('Total Saldo', style: TextStyle(color: Colors.white70)),
-                          const Icon(Icons.visibility_outlined, color: Colors.white70, size: 20),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _isObscured = !_isObscured;
+                              });
+                            },
+                            child: Icon(
+                              _isObscured ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                              color: Colors.white70,
+                              size: 20,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        CurrencyFormat.convertToIdr(financeData.quickStats.netWorth),
+                        _isObscured ? 'Rp ********' : CurrencyFormat.convertToIdr(totalSaldo),
                         style: Theme.of(context).textTheme.displaySmall?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -148,7 +182,7 @@ class HomeScreen extends StatelessWidget {
                                     children: [
                                       const Text('Pemasukan', style: TextStyle(color: Colors.white70, fontSize: 12)),
                                       Text(
-                                        CurrencyFormat.convertToIdr(financeData.quickStats.monthIncome),
+                                        _isObscured ? 'Rp ********' : CurrencyFormat.convertToIdr(financeData.quickStats.monthIncome),
                                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -176,7 +210,7 @@ class HomeScreen extends StatelessWidget {
                                     children: [
                                       const Text('Pengeluaran', style: TextStyle(color: Colors.white70, fontSize: 12)),
                                       Text(
-                                        CurrencyFormat.convertToIdr(financeData.quickStats.monthSpending),
+                                        _isObscured ? 'Rp ********' : CurrencyFormat.convertToIdr(financeData.quickStats.monthSpending),
                                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -198,16 +232,16 @@ class HomeScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildActionButton(Icons.add, 'Transaksi', () {
-                      if (onNavigate != null) onNavigate!(1);
+                      if (widget.onNavigate != null) widget.onNavigate!(1);
                     }),
                     _buildActionButton(Icons.track_changes, 'Goals', () {
-                      if (onNavigate != null) onNavigate!(3);
+                      if (widget.onNavigate != null) widget.onNavigate!(3);
                     }),
                     _buildActionButton(Icons.bar_chart, 'Budget', () {
-                      if (onNavigate != null) onNavigate!(2);
+                      if (widget.onNavigate != null) widget.onNavigate!(2);
                     }),
                     _buildActionButton(Icons.trending_up, 'Investasi', () {
-                      if (onNavigate != null) onNavigate!(3);
+                      if (widget.onNavigate != null) widget.onNavigate!(3);
                     }),
                   ],
                 ),
@@ -236,7 +270,7 @@ class HomeScreen extends StatelessWidget {
                     Text('Transaksi Terakhir', style: Theme.of(context).textTheme.titleMedium),
                     TextButton(
                       onPressed: () {
-                        if (onNavigate != null) onNavigate!(1);
+                        if (widget.onNavigate != null) widget.onNavigate!(1);
                       },
                       child: const Text('Lihat Semua'),
                     )
@@ -635,17 +669,11 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildInvestmentPortfolioSection(FinanceProvider financeData) {
-    final totalInvested = financeData.totalInvestment;
-    final investments = financeData.investments;
-    
-    double totalProfit = 0;
-    double initialValue = 0;
-    for(var item in investments) {
-      double profitAmount = item.amount - (item.amount / (1 + (item.profitPercentage / 100)));
-      totalProfit += profitAmount;
-      initialValue += (item.amount / (1 + (item.profitPercentage / 100)));
-    }
-    double totalProfitPercentage = initialValue > 0 ? (totalProfit / initialValue) * 100 : 0;
+    final summary = financeData.investmentSummary;
+    final totalInvested = summary.totalValue > 0 ? summary.totalValue : financeData.totalInvestment;
+    final totalProfit = summary.totalValue > 0 ? summary.gainLoss : financeData.investments.fold(0.0, (sum, item) => sum + item.gainLoss);
+    final double totalCost = summary.totalValue > 0 ? summary.totalCost : financeData.investments.fold(0.0, (sum, item) => sum + item.totalCost);
+    final totalProfitPercentage = summary.totalValue > 0 ? summary.gainLossPercent : (totalCost > 0 ? (totalProfit / totalCost) * 100 : 0.0);
     bool isPositive = totalProfitPercentage >= 0;
 
     return Column(

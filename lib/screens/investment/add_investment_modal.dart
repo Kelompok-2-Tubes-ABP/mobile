@@ -18,7 +18,9 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
   final TextEditingController _avgCostController = TextEditingController();
   final TextEditingController _currentPriceController = TextEditingController();
   final TextEditingController _platformController = TextEditingController();
+  final TextEditingController _QuantityController = TextEditingController();
   String selectedType = 'saham'; // Default type
+  String selectedCurrency = 'IDR'; // Default currency
   bool _isLoading = false;
 
   @override
@@ -58,40 +60,19 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () => Navigator.pop(context),
-                )
-              ],
-            ),
-            const SizedBox(height: 24),
-            
-            // Amount Input
-            const Text('Jumlah Investasi', style: TextStyle(color: AppTheme.textSecondary)),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                const Text('Rp ', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                Expanded(
-                  child: TextField(
-                    controller: _amountController,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                    decoration: const InputDecoration(
-                      hintText: '0',
-                      hintStyle: TextStyle(color: Colors.grey),
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      fillColor: Colors.transparent,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
 
             // Name Input
-            const Text('Nama Aset', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+            const Text(
+              'Nama Aset',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _nameController,
@@ -102,7 +83,13 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
             const SizedBox(height: 20),
 
             // Symbol Input
-            const Text('Simbol / Ticker', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+            const Text(
+              'Simbol / Ticker',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _symbolController,
@@ -112,55 +99,104 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
             ),
             const SizedBox(height: 20),
 
+            // Quantity Input
+            const Text(
+              'Quantity',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _QuantityController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(hintText: 'Contoh 0.1'),
+            ),
+            const SizedBox(height: 20),
+
             // Avg Cost Input
-            const Text('Harga Beli Rata-rata', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+            const Text(
+              'Harga Beli Rata-rata',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _avgCostController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                hintText: 'Rp 0',
-              ),
+              decoration: const InputDecoration(hintText: 'Rp 0'),
             ),
             const SizedBox(height: 20),
 
             // Current Price Input
-            const Text('Harga Saat Ini', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+            const Text(
+              'Harga Saat Ini',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _currentPriceController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                hintText: 'Rp 0',
-              ),
+              decoration: const InputDecoration(hintText: 'Rp 0'),
             ),
             const SizedBox(height: 20),
 
-            // Platform / Mata Uang Input
-            const Text('Mata Uang / Platform', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+            // Platform Input
+            const Text(
+              'Platform',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _platformController,
-              decoration: const InputDecoration(
-                hintText: 'Contoh: Binance atau Ajaib',
-              ),
+              decoration: const InputDecoration(hintText: 'Contoh: Binance'),
             ),
             const SizedBox(height: 20),
 
-            // Profit Percentage Input
-            const Text('Persentase Keuntungan (%)', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _profitController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                hintText: 'Contoh: 15.5 atau -5.2',
+            // Currency Selection
+            const Text(
+              'Mata Uang',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.bold,
               ),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: selectedCurrency,
+              items: ['IDR', 'USD'].map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              onChanged: (newValue) {
+                if (newValue != null) {
+                  setState(() {
+                    selectedCurrency = newValue;
+                  });
+                }
+              },
             ),
             const SizedBox(height: 20),
 
             // Type Selection
-            const Text('Tipe Aset', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+            const Text(
+              'Tipe Aset',
+              style: TextStyle(
+                color: AppTheme.textSecondary,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -210,14 +246,22 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? AppTheme.primaryColor.withOpacity(0.1) : Colors.grey.shade100,
+            color: isSelected
+                ? AppTheme.primaryColor.withOpacity(0.1)
+                : Colors.grey.shade100,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: isSelected ? AppTheme.primaryColor : Colors.transparent, width: 1.5),
+            border: Border.all(
+              color: isSelected ? AppTheme.primaryColor : Colors.transparent,
+              width: 1.5,
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: isSelected ? AppTheme.primaryColor : Colors.grey),
+              Icon(
+                icon,
+                color: isSelected ? AppTheme.primaryColor : Colors.grey,
+              ),
               const SizedBox(width: 8),
               Text(
                 label,
@@ -234,13 +278,17 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
   }
 
   void _saveInvestment() async {
-    final amount = double.tryParse(_amountController.text) ?? 0;
-    final avgCost = double.tryParse(_avgCostController.text) ?? 0;
-    final currentPrice = double.tryParse(_currentPriceController.text) ?? 0;
-    
-    if (amount <= 0 || _nameController.text.isEmpty || _symbolController.text.isEmpty) {
+    final quantity = double.tryParse(_QuantityController.text) ?? 0.0;
+    final avgCost = double.tryParse(_avgCostController.text) ?? 0.0;
+    final currentPrice = double.tryParse(_currentPriceController.text) ?? 0.0;
+
+    if (quantity <= 0 ||
+        _nameController.text.isEmpty ||
+        _symbolController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Harap isi Jumlah Investasi, Nama Aset, dan Simbol')),
+        const SnackBar(
+          content: Text('Harap isi Quantity, Nama Aset, dan Simbol'),
+        ),
       );
       return;
     }
@@ -252,8 +300,9 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
     final name = _nameController.text;
     final symbol = _symbolController.text;
     final type = selectedType;
-    final quantity = amount / (currentPrice > 0 ? currentPrice : (avgCost > 0 ? avgCost : 1.0));
-    final exchange = _platformController.text.isEmpty ? 'Binance' : _platformController.text;
+    final exchange = _platformController.text.isEmpty
+        ? 'Binance'
+        : _platformController.text;
 
     try {
       final financeProvider = context.read<FinanceProvider>();
@@ -265,6 +314,7 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
         avgCost,
         currentPrice,
         exchange,
+        selectedCurrency,
       );
 
       if (success) {
@@ -278,7 +328,9 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
             _isLoading = false;
           });
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Gagal menyimpan investasi ke server')),
+            const SnackBar(
+              content: Text('Gagal menyimpan investasi ke server'),
+            ),
           );
         }
       }
@@ -287,9 +339,9 @@ class _AddInvestmentModalState extends State<AddInvestmentModal> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }

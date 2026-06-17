@@ -13,6 +13,18 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool _isLoading = false;
+  bool _isChangingPassword = false;
+  final TextEditingController _oldPasswordController = TextEditingController();
+  final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _oldPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -30,6 +42,51 @@ class _ProfilePageState extends State<ProfilePage> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  void _handleChangePassword() async {
+    final oldPass = _oldPasswordController.text;
+    final newPass = _newPasswordController.text;
+    final confirmPass = _confirmPasswordController.text;
+
+    if (oldPass.isEmpty || newPass.isEmpty || confirmPass.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Semua field password harus diisi')),
+      );
+      return;
+    }
+
+    if (newPass != confirmPass) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Konfirmasi password tidak sama')),
+      );
+      return;
+    }
+
+    if (newPass.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password baru minimal 8 karakter')),
+      );
+      return;
+    }
+
+    setState(() => _isChangingPassword = true);
+
+    final result = await context.read<AuthProvider>().changePassword(oldPass, newPass);
+
+    if (!mounted) return;
+
+    setState(() => _isChangingPassword = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(result['message'])),
+    );
+
+    if (result['success']) {
+      _oldPasswordController.clear();
+      _newPasswordController.clear();
+      _confirmPasswordController.clear();
     }
   }
 
@@ -142,9 +199,9 @@ class _ProfilePageState extends State<ProfilePage> {
                       title: 'Ganti Password',
                       child: Column(
                         children: [
-                          _buildPasswordField('Password Lama'),
-                          _buildPasswordField('Password Baru'),
-                          _buildPasswordField('Konfirmasi Password Baru'),
+                          _buildPasswordField('Password Lama', _oldPasswordController),
+                          _buildPasswordField('Password Baru', _newPasswordController),
+                          _buildPasswordField('Konfirmasi Password Baru', _confirmPasswordController),
 
                           const SizedBox(height: 20),
 
@@ -163,67 +220,23 @@ class _ProfilePageState extends State<ProfilePage> {
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Fitur ganti password belum diimplementasikan')),
-                                );
-                              },
-                              child: const Text(
-                                'Ganti Password',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // ================= ZONA BAHAYA =================
-                    _buildSectionCard(
-                      title: 'Zona Bahaya',
-                      titleColor: const Color(0xffEF4444),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Hapus akun akan menghapus semua data kamu secara permanen. Aksi ini tidak dapat dibatalkan.',
-                            style: TextStyle(
-                              color: Color(0xff64748B),
-                              height: 1.5,
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xffEF4444),
-                              elevation: 4,
-                              shadowColor: Colors.black26,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 16,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Fitur hapus akun belum diimplementasikan')),
-                              );
-                            },
-                            child: const Text(
-                              'Hapus Akun',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
+                              onPressed: _isChangingPassword ? null : _handleChangePassword,
+                              child: _isChangingPassword
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'Ganti Password',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
                             ),
                           ),
                         ],
@@ -429,7 +442,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildPasswordField(String label) {
+  Widget _buildPasswordField(String label, TextEditingController controller) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -444,6 +457,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(height: 8),
           TextField(
+            controller: controller,
             obscureText: true,
             decoration: InputDecoration(
               filled: true,

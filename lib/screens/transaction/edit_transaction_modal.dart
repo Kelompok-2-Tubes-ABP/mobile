@@ -58,7 +58,7 @@ class _EditTransactionModalState extends State<EditTransactionModal> {
     selectedType = widget.transaction.type;
     _amountController.text = widget.transaction.amount.toInt().toString();
     _descriptionController.text = widget.transaction.title;
-    selectedDate = widget.transaction.date;
+    selectedDate = DateTime(widget.transaction.date.year, widget.transaction.date.month, widget.transaction.date.day, 12, 0, 0);
     selectedPaymentMethod = widget.transaction.paymentMethod;
 
     // Normalisasi kategori dari API. Jika kategori bernilai 'pendapatan', ubah ke default 'Gaji' di UI
@@ -75,9 +75,9 @@ class _EditTransactionModalState extends State<EditTransactionModal> {
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
     );
-    if (picked != null && picked != selectedDate) {
+    if (picked != null) {
       setState(() {
-        selectedDate = picked;
+        selectedDate = DateTime(picked.year, picked.month, picked.day, 12, 0, 0);
       });
     }
   }
@@ -417,6 +417,7 @@ class _EditTransactionModalState extends State<EditTransactionModal> {
     );
 
     final financeProvider = context.read<FinanceProvider>();
+    print('EDIT TRANSACTION DATE: ${selectedDate.toUtc().toIso8601String()}');
 
     // Tampilkan loading dialog
     showDialog(
