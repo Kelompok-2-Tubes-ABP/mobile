@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/finance_provider.dart';
 import '../../models/user.dart';
+import 'edit_profile.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -16,7 +17,8 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isChangingPassword = false;
   final TextEditingController _oldPasswordController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   @override
   void dispose() {
@@ -73,15 +75,18 @@ class _ProfilePageState extends State<ProfilePage> {
 
     setState(() => _isChangingPassword = true);
 
-    final result = await context.read<AuthProvider>().changePassword(oldPass, newPass);
+    final result = await context.read<AuthProvider>().changePassword(
+      oldPass,
+      newPass,
+    );
 
     if (!mounted) return;
 
     setState(() => _isChangingPassword = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(result['message'])),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(result['message'])));
 
     if (result['success']) {
       _oldPasswordController.clear();
@@ -117,7 +122,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     const SizedBox(height: 20),
 
                     // ================= PROFILE CARD =================
-                    _buildProfileCard(user),
+                    _buildProfileCard(context, user),
 
                     const SizedBox(height: 20),
 
@@ -176,7 +181,11 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               onPressed: () {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Fitur ubah profil belum diimplementasikan')),
+                                  const SnackBar(
+                                    content: Text(
+                                      'Fitur ubah profil belum diimplementasikan',
+                                    ),
+                                  ),
                                 );
                               },
                               child: const Text(
@@ -199,9 +208,18 @@ class _ProfilePageState extends State<ProfilePage> {
                       title: 'Ganti Password',
                       child: Column(
                         children: [
-                          _buildPasswordField('Password Lama', _oldPasswordController),
-                          _buildPasswordField('Password Baru', _newPasswordController),
-                          _buildPasswordField('Konfirmasi Password Baru', _confirmPasswordController),
+                          _buildPasswordField(
+                            'Password Lama',
+                            _oldPasswordController,
+                          ),
+                          _buildPasswordField(
+                            'Password Baru',
+                            _newPasswordController,
+                          ),
+                          _buildPasswordField(
+                            'Konfirmasi Password Baru',
+                            _confirmPasswordController,
+                          ),
 
                           const SizedBox(height: 20),
 
@@ -220,7 +238,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
-                              onPressed: _isChangingPassword ? null : _handleChangePassword,
+                              onPressed: _isChangingPassword
+                                  ? null
+                                  : _handleChangePassword,
                               child: _isChangingPassword
                                   ? const SizedBox(
                                       width: 20,
@@ -252,7 +272,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   // ================= PROFILE CARD =================
-  Widget _buildProfileCard(User? user) {
+  Widget _buildProfileCard(BuildContext context, User? user) {
     final name = user?.name ?? 'Guest';
     final email = user?.email ?? 'guest@financeapp.com';
     final initial = name.isNotEmpty ? name.substring(0, 1).toUpperCase() : 'G';
@@ -287,15 +307,12 @@ class _ProfilePageState extends State<ProfilePage> {
                     color: Color(0xff10B981),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(
-                    Icons.add,
-                    color: Colors.white,
-                    size: 18,
-                  ),
+                  child: const Icon(Icons.add, color: Colors.white, size: 18),
                 ),
               ),
             ],
           ),
+
           const SizedBox(height: 14),
 
           Text(
@@ -306,30 +323,40 @@ class _ProfilePageState extends State<ProfilePage> {
               color: Color(0xff1E293B),
             ),
           ),
+
           const SizedBox(height: 6),
 
           Text(
             email,
-            style: const TextStyle(
-              color: Color(0xff64748B),
-              fontSize: 16,
-            ),
+            style: const TextStyle(color: Color(0xff64748B), fontSize: 16),
           ),
+
           const SizedBox(height: 20),
 
           OutlinedButton(
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xff4F46E5),
               side: const BorderSide(color: Color(0xff4F46E5)),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 26,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
-            onPressed: () {},
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => EditProfilePage(
+                    currentUsername: name,
+                    currentEmail: email,
+                  ),
+                ),
+              );
+
+              if (result == true) {
+                _fetchProfile();
+              }
+            },
             child: const Text('Edit Profil'),
           ),
         ],
@@ -357,10 +384,7 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                  color: Color(0xff64748B),
-                  fontSize: 14,
-                ),
+                style: const TextStyle(color: Color(0xff64748B), fontSize: 14),
               ),
               const SizedBox(height: 4),
               Text(
