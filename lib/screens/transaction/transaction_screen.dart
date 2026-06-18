@@ -9,14 +9,19 @@ import 'add_transaction_modal.dart';
 import 'edit_transaction_modal.dart';
 
 class TransactionScreen extends StatefulWidget {
-  const TransactionScreen({super.key});
+  final Function(int)? onNavigate;
+
+  const TransactionScreen({
+    super.key,
+    this.onNavigate,
+  });
 
   @override
   State<TransactionScreen> createState() => _TransactionScreenState();
 }
 
 class _TransactionScreenState extends State<TransactionScreen> {
-  String selectedMonth = 'Mei';
+  late String selectedMonth;
   String selectedCategory = 'All';
 
   final List<String> months = [
@@ -33,6 +38,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
     'November',
     'Desember',
   ];
+
   final List<String> categories = [
     'All',
     'Makanan',
@@ -49,15 +55,97 @@ class _TransactionScreenState extends State<TransactionScreen> {
   void initState() {
     super.initState();
 
+    selectedMonth = _currentMonthLabel();
+
     Future.microtask(() async {
-      await context.read<FinanceProvider>().fetchTransactions();
+      final provider = context.read<FinanceProvider>();
 
-      await context.read<FinanceProvider>().fetchBudgets();
+      await provider.fetchMonthlySummary(
+        month: _monthLabelToBackend(selectedMonth),
+      );
 
-      await context.read<FinanceProvider>().fetchBudgetSummary();
-
-      await context.read<FinanceProvider>().fetchAllBudgetSpending();
+      await provider.fetchTransactions();
+      await provider.fetchBudgets();
+      await provider.fetchBudgetSummary();
+      await provider.fetchAllBudgetSpending();
     });
+  }
+
+  String _currentMonthLabel() {
+    switch (DateTime.now().month) {
+      case 1:
+        return 'Jan';
+      case 2:
+        return 'Feb';
+      case 3:
+        return 'Mar';
+      case 4:
+        return 'Apr';
+      case 5:
+        return 'Mei';
+      case 6:
+        return 'Juni';
+      case 7:
+        return 'Juli';
+      case 8:
+        return 'Agustus';
+      case 9:
+        return 'September';
+      case 10:
+        return 'Oktober';
+      case 11:
+        return 'November';
+      case 12:
+        return 'Desember';
+      default:
+        return 'Juni';
+    }
+  }
+
+  String _monthLabelToBackend(String month) {
+    switch (month) {
+      case 'Jan':
+        return 'January';
+      case 'Feb':
+        return 'February';
+      case 'Mar':
+        return 'March';
+      case 'Apr':
+        return 'April';
+      case 'Mei':
+        return 'May';
+      case 'Juni':
+        return 'June';
+      case 'Juli':
+        return 'July';
+      case 'Agustus':
+        return 'August';
+      case 'September':
+        return 'September';
+      case 'Oktober':
+        return 'October';
+      case 'November':
+        return 'November';
+      case 'Desember':
+        return 'December';
+      default:
+        return 'June';
+    }
+  }
+
+  Future<void> _changeMonth(String month) async {
+    setState(() {
+      selectedMonth = month;
+      selectedCategory = 'All';
+    });
+
+    final provider = context.read<FinanceProvider>();
+
+    await provider.fetchMonthlySummary(
+      month: _monthLabelToBackend(month),
+    );
+
+    await provider.fetchTransactions();
   }
 
   @override
@@ -66,7 +154,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      drawer: const AppDrawer(currentIndex: 1),
+      drawer: AppDrawer(
+        onNavigate: widget.onNavigate,
+        currentIndex: 1,
+      ),
       appBar: AppBar(
         title: const Text('Transaksi'),
         actions: [
@@ -88,7 +179,6 @@ class _TransactionScreenState extends State<TransactionScreen> {
       ),
       body: Column(
         children: [
-          // Month Selector
           Container(
             height: 60,
             padding: const EdgeInsets.symmetric(vertical: 8),
@@ -97,9 +187,11 @@ class _TransactionScreenState extends State<TransactionScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               itemCount: months.length,
               itemBuilder: (context, index) {
-                bool isSelected = months[index] == selectedMonth;
+                final month = months[index];
+                final isSelected = month == selectedMonth;
+
                 return GestureDetector(
-                  onTap: () => setState(() => selectedMonth = months[index]),
+                  onTap: () => _changeMonth(month),
                   child: Container(
                     margin: const EdgeInsets.only(right: 8),
                     padding: const EdgeInsets.symmetric(
@@ -116,7 +208,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                       ),
                     ),
                     child: Text(
-                      months[index],
+                      month,
                       style: TextStyle(
                         color: isSelected
                             ? Colors.white
@@ -134,42 +226,63 @@ class _TransactionScreenState extends State<TransactionScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // Summary Cards
                 _buildSummaryCard(
                   'Pemasukan',
-                  financeData.totalPemasukan,
+                  financeData.monthlyIncome,
                   AppTheme.success,
+                  isLoading: financeData.isLoadingMonthlySummary,
                 ),
+
                 const SizedBox(height: 12),
+
                 _buildSummaryCard(
                   'Pengeluaran',
-                  financeData.totalPengeluaran,
+                  financeData.monthlyOutcome,
                   AppTheme.danger,
+                  isExpense: true,
+                  isLoading: financeData.isLoadingMonthlySummary,
                 ),
+
                 const SizedBox(height: 12),
+
                 _buildSummaryCard(
                   'Selisih',
-                  financeData.totalSaldo,
-                  financeData.totalSaldo >= 0
+                  financeData.monthlyNet,
+                  financeData.monthlyNet >= 0
                       ? AppTheme.success
                       : AppTheme.danger,
                   isDiff: true,
+                  isLoading: financeData.isLoadingMonthlySummary,
                 ),
+
+                if (financeData.monthlySummaryError.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    financeData.monthlySummaryError,
+                    style: const TextStyle(
+                      color: AppTheme.danger,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
 
                 const SizedBox(height: 24),
 
-                // Category Filters
                 SizedBox(
                   height: 40,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: categories.length,
                     itemBuilder: (context, index) {
-                      bool isSelected = categories[index] == selectedCategory;
+                      final category = categories[index];
+                      final isSelected = category == selectedCategory;
+
                       return GestureDetector(
-                        onTap: () => setState(
-                          () => selectedCategory = categories[index],
-                        ),
+                        onTap: () {
+                          setState(() {
+                            selectedCategory = category;
+                          });
+                        },
                         child: Container(
                           margin: const EdgeInsets.only(right: 8),
                           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -181,7 +294,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                           ),
                           child: Center(
                             child: Text(
-                              categories[index],
+                              category,
                               style: TextStyle(
                                 color: isSelected
                                     ? AppTheme.primaryColor
@@ -200,29 +313,18 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
                 const SizedBox(height: 16),
 
-                // Grouped Transactions
                 _buildTransactionList(financeData.transactions),
               ],
             ),
           ),
         ],
       ),
-      floatingActionButton: Builder(
-        builder: (context) {
-          return FloatingActionButton(
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
-            },
-            backgroundColor: AppTheme.primaryColor,
-            child: const Icon(Icons.add, color: Colors.white),
-          );
-        },
-      ),
     );
   }
 
   void _showAddTransaction(BuildContext context) {
     print('TRANSACTION SCREEN MONTH: $selectedMonth');
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -232,11 +334,21 @@ class _TransactionScreenState extends State<TransactionScreen> {
   }
 
   Widget _buildSummaryCard(
-    String title,
-    double amount,
-    Color color, {
-    bool isDiff = false,
-  }) {
+      String title,
+      double amount,
+      Color color, {
+        bool isDiff = false,
+        bool isExpense = false,
+        bool isLoading = false,
+      }) {
+    String prefix = '';
+
+    if (isExpense && amount > 0) {
+      prefix = '-';
+    } else if (isDiff && amount > 0) {
+      prefix = '+';
+    }
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -249,17 +361,27 @@ class _TransactionScreenState extends State<TransactionScreen> {
         children: [
           Text(
             title,
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${isDiff && amount > 0 ? '+' : ''}${CurrencyFormat.convertToIdr(amount)}',
-            style: TextStyle(
-              color: color,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+            style: const TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 14,
             ),
           ),
+          const SizedBox(height: 4),
+          if (isLoading)
+            const SizedBox(
+              height: 28,
+              width: 28,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            Text(
+              '$prefix${CurrencyFormat.convertToIdr(amount.abs())}',
+              style: TextStyle(
+                color: color,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
         ],
       ),
     );
@@ -281,7 +403,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
       'Desember': 12,
     };
 
-    final selectedMonthNumber = monthMap[selectedMonth];
+    final selectedMonthNumber = monthMap[selectedMonth] ?? DateTime.now().month;
 
     print('BULAN DIPILIH: $selectedMonth');
     print('MONTH NUMBER: $selectedMonthNumber');
@@ -290,10 +412,15 @@ class _TransactionScreenState extends State<TransactionScreen> {
       print('${tx.title} => ${tx.date} => month ${tx.date.month}');
     }
 
-    List<t.Transaction> filtered = transactions.where((tx) {
+    final filtered = transactions.where((tx) {
       final matchesMonth = tx.date.month == selectedMonthNumber;
-      final matchesCategory = selectedCategory == 'All' || tx.category == selectedCategory;
-      print('FILTERED MONTH CHECK: tx.date.month=${tx.date.month} vs selectedMonthNumber=$selectedMonthNumber => $matchesMonth');
+      final matchesCategory =
+          selectedCategory == 'All' || tx.category == selectedCategory;
+
+      print(
+        'FILTERED MONTH CHECK: tx.date.month=${tx.date.month} vs selectedMonthNumber=$selectedMonthNumber => $matchesMonth',
+      );
+
       return matchesMonth && matchesCategory;
     }).toList();
 
@@ -307,9 +434,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
     }
 
     return Column(
-      children: filtered
-          .map((tx) => _buildTransactionItem(context, tx))
-          .toList(),
+      children: filtered.map((tx) => _buildTransactionItem(context, tx)).toList(),
     );
   }
 
@@ -322,15 +447,20 @@ class _TransactionScreenState extends State<TransactionScreen> {
     );
   }
 
-  void _confirmDeleteTransaction(BuildContext context, t.Transaction tx) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+  Future<void> _confirmDeleteTransaction(
+      BuildContext parentContext,
+      t.Transaction tx,
+      ) async {
+    final confirmed = await showDialog<bool>(
+      context: parentContext,
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Hapus Transaksi'),
-        content: Text('Apakah Anda yakin ingin menghapus transaksi "${tx.title}"?'),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus transaksi "${tx.title}"?',
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext, false),
             child: const Text('Batal'),
           ),
           ElevatedButton(
@@ -338,38 +468,78 @@ class _TransactionScreenState extends State<TransactionScreen> {
               backgroundColor: AppTheme.danger,
               foregroundColor: Colors.white,
             ),
-            onPressed: () {
-              Navigator.pop(context); // Tutup dialog konfirmasi
-              
-              // Tampilkan dialog loading
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (context) => const Center(child: CircularProgressIndicator()),
-              );
-              
-              context.read<FinanceProvider>().deleteTransaction(tx.id).then((success) {
-                Navigator.pop(context); // Tutup dialog loading
-                if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Transaksi berhasil dihapus')),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Gagal menghapus transaksi')),
-                  );
-                }
-              });
-            },
+            onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Hapus'),
           ),
         ],
       ),
     );
+
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    BuildContext? loadingContext;
+
+    showDialog(
+      context: parentContext,
+      barrierDismissible: false,
+      builder: (ctx) {
+        loadingContext = ctx;
+        return const Center(
+          child: CircularProgressIndicator(),
+        );
+      },
+    );
+
+    bool success = false;
+
+    try {
+      print('DELETE TRANSACTION ID: ${tx.id}');
+
+      success = await parentContext
+          .read<FinanceProvider>()
+          .deleteTransaction(tx.id)
+          .timeout(
+        const Duration(seconds: 20),
+        onTimeout: () {
+          print('DELETE TRANSACTION TIMEOUT');
+          return false;
+        },
+      );
+    } catch (e) {
+      print('ERROR DELETE TRANSACTION SCREEN: $e');
+      success = false;
+    } finally {
+      if (loadingContext != null && Navigator.of(loadingContext!).canPop()) {
+        Navigator.of(loadingContext!).pop();
+      } else if (mounted) {
+        Navigator.of(parentContext, rootNavigator: true).maybePop();
+      }
+    }
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(parentContext).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Transaksi berhasil dihapus'
+              : 'Gagal menghapus transaksi',
+        ),
+      ),
+    );
   }
 
   Widget _buildTransactionItem(BuildContext context, t.Transaction tx) {
-    bool isPemasukan = tx.type == t.TransactionType.pemasukan;
+    final isPemasukan = tx.type == t.TransactionType.pemasukan;
+
+    final amountPrefix = isPemasukan ? '+' : '-';
+    final amountColor = isPemasukan ? AppTheme.success : AppTheme.danger;
+    final iconColor = isPemasukan ? AppTheme.success : AppTheme.danger;
+    final iconBackgroundColor = isPemasukan
+        ? AppTheme.success.withOpacity(0.1)
+        : AppTheme.danger.withOpacity(0.1);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -396,18 +566,20 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: isPemasukan
-                          ? AppTheme.success.withOpacity(0.1)
-                          : AppTheme.warning.withOpacity(0.1),
+                      color: iconBackgroundColor,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      isPemasukan ? Icons.arrow_upward : _getCategoryIcon(tx.category),
-                      color: isPemasukan ? AppTheme.success : AppTheme.warning,
+                      isPemasukan
+                          ? Icons.arrow_upward
+                          : Icons.arrow_downward,
+                      color: iconColor,
                       size: 20,
                     ),
                   ),
+
                   const SizedBox(width: 16),
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -420,21 +592,32 @@ class _TransactionScreenState extends State<TransactionScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
+                        const Text(
+                          '',
+                          style: TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
                         Text(
-                          '${tx.category} • ${tx.paymentMethod}',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                          tx.category,
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
                   ),
+
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        '${isPemasukan ? '+' : ''}${CurrencyFormat.convertToIdr(tx.amount)}',
+                        '$amountPrefix${CurrencyFormat.convertToIdr(tx.amount.abs())}',
                         style: TextStyle(
-                          color: isPemasukan ? AppTheme.success : AppTheme.textPrimary,
+                          color: amountColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
@@ -442,13 +625,21 @@ class _TransactionScreenState extends State<TransactionScreen> {
                       const SizedBox(height: 4),
                       Text(
                         tx.time,
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 10),
+                        style: const TextStyle(
+                          color: AppTheme.textSecondary,
+                          fontSize: 10,
+                        ),
                       ),
                     ],
                   ),
+
                   const SizedBox(width: 8),
+
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: AppTheme.danger),
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      color: AppTheme.danger,
+                    ),
                     onPressed: () => _confirmDeleteTransaction(context, tx),
                   ),
                 ],
@@ -458,20 +649,5 @@ class _TransactionScreenState extends State<TransactionScreen> {
         ),
       ),
     );
-  }
-
-  IconData _getCategoryIcon(String category) {
-    switch (category) {
-      case 'Makanan':
-        return Icons.restaurant;
-      case 'Transportasi':
-        return Icons.directions_car;
-      case 'Belanja':
-        return Icons.shopping_bag;
-      case 'Tagihan':
-        return Icons.receipt;
-      default:
-        return Icons.category;
-    }
   }
 }

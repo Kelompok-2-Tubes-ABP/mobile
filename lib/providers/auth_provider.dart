@@ -13,7 +13,7 @@ class AuthProvider with ChangeNotifier {
   final storage = const FlutterSecureStorage();
 
   Future<bool> login(String email, String password) async {
-    final url = Uri.parse('http://localhost:8000/auth/login');
+    final url = Uri.parse('http://172.24.217.180:8000/auth/login');
 
     try {
       final response = await http.post(
@@ -71,7 +71,7 @@ class AuthProvider with ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/profile/'),
+        Uri.parse('http://172.24.217.180:8000/profile/'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -83,9 +83,10 @@ class AuthProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         _currentUser = User(
-          name: data['Message']['username'],
-          email: data['Message']['email'],
-          id: '',
+          id: data['Message']['id'] ?? '',
+          name: data['Message']['username'] ?? '',
+          email: data['Message']['email'] ?? '',
+          bergabung: data['Message']['created_at'],
         );
         notifyListeners();
         return true;
@@ -111,7 +112,7 @@ class AuthProvider with ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/profile/'),
+        Uri.parse('http://172.24.217.180:8000/profile/'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -122,8 +123,10 @@ class AuthProvider with ChangeNotifier {
       final data = jsonDecode(response.body);
 
       _currentUser = User(
-        name: data['Message']['username'],
-        email: data['Message']['email'], id: '',
+        id: data['Message']['id'] ?? '',
+        name: data['Message']['username'] ?? '',
+        email: data['Message']['email'] ?? '',
+        bergabung: data['Message']['created_at'],
       );
 
       notifyListeners();
@@ -144,7 +147,7 @@ class AuthProvider with ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/transaction/'),
+        Uri.parse('http://172.24.217.180:8000/transaction/'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -169,7 +172,7 @@ class AuthProvider with ChangeNotifier {
       return {'success': false, 'message': 'Token tidak ditemukan'};
     }
 
-    final url = Uri.parse('http://localhost:8000/profile/change-password');
+    final url = Uri.parse('http://172.24.217.180:8000/profile/change-password');
     try {
       final response = await http.post(
         url,
@@ -210,7 +213,7 @@ class AuthProvider with ChangeNotifier {
       return false;
     }
 
-    final url = Uri.parse('http://localhost:8000/auth/register');
+    final url = Uri.parse('http://172.24.217.180:8000/auth/register');
 
     try {
       final response = await http.post(

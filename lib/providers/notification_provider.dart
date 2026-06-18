@@ -23,7 +23,7 @@ class NotificationProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final url = Uri.parse('http://localhost:8000/api/notifications/feed?unread_only=$unreadOnly');
+      final url = Uri.parse('http://172.24.217.180:8000/api/notifications/feed?unread_only=$unreadOnly');
       final response = await http.get(
         url,
         headers: {'Authorization': 'Bearer $token'},
@@ -54,7 +54,7 @@ class NotificationProvider extends ChangeNotifier {
     if (token == null) return;
 
     try {
-      final url = Uri.parse('http://localhost:8000/api/notifications/feed/$id/read');
+      final url = Uri.parse('http://172.24.217.180:8000/api/notifications/feed/$id/read');
       final response = await http.patch(
         url,
         headers: {'Authorization': 'Bearer $token'},
@@ -85,7 +85,7 @@ class NotificationProvider extends ChangeNotifier {
     if (token == null) return;
 
     try {
-      final url = Uri.parse('http://localhost:8000/api/notifications/feed/read-all');
+      final url = Uri.parse('http://172.24.217.180:8000/api/notifications/feed/read-all');
       final response = await http.patch(
         url,
         headers: {'Authorization': 'Bearer $token'},

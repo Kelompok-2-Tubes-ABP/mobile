@@ -14,19 +14,6 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool _isLoading = false;
-  bool _isChangingPassword = false;
-  final TextEditingController _oldPasswordController = TextEditingController();
-  final TextEditingController _newPasswordController = TextEditingController();
-  final TextEditingController _confirmPasswordController =
-      TextEditingController();
-
-  @override
-  void dispose() {
-    _oldPasswordController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
 
   @override
   void initState() {
@@ -46,52 +33,36 @@ class _ProfilePageState extends State<ProfilePage> {
       }
     }
   }
-
-  void _handleChangePassword() async {
-    final oldPass = _oldPasswordController.text;
-    final newPass = _newPasswordController.text;
-    final confirmPass = _confirmPasswordController.text;
-
-    if (oldPass.isEmpty || newPass.isEmpty || confirmPass.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Semua field password harus diisi')),
-      );
-      return;
+  String _formatTanggalBergabung(String? dateString) {
+    if (dateString == null || dateString.isEmpty) {
+      return '-';
     }
 
-    if (newPass != confirmPass) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Konfirmasi password tidak sama')),
-      );
-      return;
-    }
+    try {
+      final date = DateTime.parse(dateString).toLocal();
 
-    if (newPass.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password baru minimal 8 karakter')),
-      );
-      return;
-    }
+      const monthNames = [
+        'Januari',
+        'Februari',
+        'Maret',
+        'April',
+        'Mei',
+        'Juni',
+        'Juli',
+        'Agustus',
+        'September',
+        'Oktober',
+        'November',
+        'Desember',
+      ];
 
-    setState(() => _isChangingPassword = true);
+      final day = date.day;
+      final month = monthNames[date.month - 1];
+      final year = date.year;
 
-    final result = await context.read<AuthProvider>().changePassword(
-      oldPass,
-      newPass,
-    );
-
-    if (!mounted) return;
-
-    setState(() => _isChangingPassword = false);
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(result['message'])));
-
-    if (result['success']) {
-      _oldPasswordController.clear();
-      _newPasswordController.clear();
-      _confirmPasswordController.clear();
+      return '$day $month $year';
+    } catch (e) {
+      return '-';
     }
   }
 
@@ -107,166 +78,57 @@ class _ProfilePageState extends State<ProfilePage> {
         child: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Profil',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xff1E293B),
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ================= PROFILE CARD =================
+              _buildProfileCard(context, user),
+
+              const SizedBox(height: 20),
+
+              // ================= STATS =================
+              _buildStatCard(
+                icon: Icons.calendar_today_outlined,
+                iconColor: const Color(0xff4F46E5),
+                title: 'Member Sejak',
+                value: _formatTanggalBergabung(user?.bergabung),
+              ),
+              const SizedBox(height: 16),
+
+              _buildStatCard(
+                icon: Icons.account_balance_wallet_outlined,
+                iconColor: const Color(0xff10B981),
+                title: 'Total Transaksi',
+                value: financeData.transactions.length.toString(),
+              ),
+              const SizedBox(height: 16),
+
+              // ================= INFORMASI PRIBADI =================
+              _buildSectionCard(
+                title: 'Informasi Pribadi',
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Profil',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xff1E293B),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ================= PROFILE CARD =================
-                    _buildProfileCard(context, user),
-
-                    const SizedBox(height: 20),
-
-                    // ================= STATS =================
-                    _buildStatCard(
-                      icon: Icons.calendar_today_outlined,
-                      iconColor: const Color(0xff4F46E5),
-                      title: 'Member Sejak',
-                      value: 'Juni 2026',
-                    ),
-                    const SizedBox(height: 16),
-
-                    _buildStatCard(
-                      icon: Icons.account_balance_wallet_outlined,
-                      iconColor: const Color(0xff10B981),
-                      title: 'Total Transaksi',
-                      value: financeData.transactions.length.toString(),
-                    ),
-                    const SizedBox(height: 16),
-
-                    _buildStatCard(
-                      icon: Icons.credit_card_outlined,
-                      iconColor: const Color(0xffF59E0B),
-                      title: 'Akun Terhubung',
-                      value: '1',
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // ================= INFORMASI PRIBADI =================
-                    _buildSectionCard(
-                      title: 'Informasi Pribadi',
-                      child: Column(
-                        children: [
-                          _buildTextField('Username', user?.name ?? '-'),
-                          _buildTextField('Email', user?.email ?? '-'),
-                          _buildTextField('Nama Lengkap', user?.name ?? '-'),
-                          _buildTextField('Nomor Telepon', '-'),
-
-                          const SizedBox(height: 20),
-
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xff4F46E5),
-                                elevation: 4,
-                                shadowColor: Colors.black26,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              onPressed: () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Fitur ubah profil belum diimplementasikan',
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: const Text(
-                                'Simpan Perubahan',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // ================= GANTI PASSWORD =================
-                    _buildSectionCard(
-                      title: 'Ganti Password',
-                      child: Column(
-                        children: [
-                          _buildPasswordField(
-                            'Password Lama',
-                            _oldPasswordController,
-                          ),
-                          _buildPasswordField(
-                            'Password Baru',
-                            _newPasswordController,
-                          ),
-                          _buildPasswordField(
-                            'Konfirmasi Password Baru',
-                            _confirmPasswordController,
-                          ),
-
-                          const SizedBox(height: 20),
-
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xff10B981),
-                                elevation: 4,
-                                shadowColor: Colors.black26,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 28,
-                                  vertical: 16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              onPressed: _isChangingPassword
-                                  ? null
-                                  : _handleChangePassword,
-                              child: _isChangingPassword
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Ganti Password',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
+                    _buildTextField('Username', user?.name ?? '-'),
+                    _buildTextField('Email', user?.email ?? '-'),
                   ],
                 ),
               ),
+
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -295,19 +157,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     fontSize: 36,
                     fontWeight: FontWeight.w500,
                   ),
-                ),
-              ),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: 30,
-                  height: 30,
-                  decoration: const BoxDecoration(
-                    color: Color(0xff10B981),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.add, color: Colors.white, size: 18),
                 ),
               ),
             ],
@@ -448,41 +297,6 @@ class _ProfilePageState extends State<ProfilePage> {
           TextField(
             controller: TextEditingController(text: value),
             readOnly: true,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: const Color(0xffF8FAFC),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xffE2E8F0)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xffE2E8F0)),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPasswordField(String label, TextEditingController controller) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Color(0xff1E293B),
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: controller,
-            obscureText: true,
             decoration: InputDecoration(
               filled: true,
               fillColor: const Color(0xffF8FAFC),

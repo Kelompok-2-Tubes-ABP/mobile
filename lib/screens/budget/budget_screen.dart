@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/theme.dart';
 import '../../core/utils.dart';
 import '../../providers/finance_provider.dart';
@@ -11,7 +12,12 @@ import 'add_monthly_budget_modal.dart';
 import '../notifications/notif.dart';
 
 class BudgetScreen extends StatefulWidget {
-  const BudgetScreen({super.key});
+  final Function(int)? onNavigate;
+
+  const BudgetScreen({
+    super.key,
+    this.onNavigate,
+  });
 
   @override
   State<BudgetScreen> createState() => _BudgetScreenState();
@@ -21,8 +27,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
   @override
   void initState() {
     super.initState();
-    // Fix visual bug: fetch all monthly budgets and current month data on load
+
     final financeData = context.read<FinanceProvider>();
+
     Future.microtask(() async {
       await financeData.fetchAllMonthlyBudgets();
       await financeData.fetchBudgets(month: financeData.selectedMonth);
@@ -37,17 +44,28 @@ class _BudgetScreenState extends State<BudgetScreen> {
     final allMonthlyBudgets = financeData.allMonthlyBudgets;
     final selectedMonth = financeData.selectedMonth;
 
-    final totalCategoryLimits = budgets.fold<double>(0.0, (sum, item) => sum + item.limit);
-    final displayLimit = monthlyBudget != null 
-        ? (monthlyBudget.limit - totalCategoryLimits).clamp(0.0, double.infinity) 
+    final totalCategoryLimits = budgets.fold<double>(
+      0.0,
+          (sum, item) => sum + item.limit,
+    );
+
+    final displayLimit = monthlyBudget != null
+        ? (monthlyBudget.limit - totalCategoryLimits).clamp(
+      0.0,
+      double.infinity,
+    )
         : 0.0;
-    final displayPercentage = monthlyBudget != null && displayLimit > 0 
-        ? (monthlyBudget.spent / displayLimit) 
+
+    final displayPercentage = monthlyBudget != null && displayLimit > 0
+        ? (monthlyBudget.spent / displayLimit)
         : 0.0;
 
     return Scaffold(
       backgroundColor: AppTheme.backgroundColor,
-      drawer: const AppDrawer(currentIndex: 2),
+      drawer: AppDrawer(
+        onNavigate: widget.onNavigate,
+        currentIndex: 2,
+      ),
       appBar: AppBar(
         title: const Text('Budgets'),
         actions: [
@@ -56,7 +74,9 @@ class _BudgetScreenState extends State<BudgetScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const NotifPage()),
+                MaterialPageRoute(
+                  builder: (context) => const NotifPage(),
+                ),
               );
             },
           ),
@@ -65,7 +85,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // Month Chips List
           if (allMonthlyBudgets.isNotEmpty)
             SizedBox(
               height: 40,
@@ -75,6 +94,7 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 itemBuilder: (context, index) {
                   final budget = allMonthlyBudgets[index];
                   final isSelected = budget.month == selectedMonth;
+
                   return Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: ChoiceChip(
@@ -87,15 +107,18 @@ class _BudgetScreenState extends State<BudgetScreen> {
                       },
                       selectedColor: AppTheme.primaryColor.withOpacity(0.2),
                       labelStyle: TextStyle(
-                        color: isSelected ? AppTheme.primaryColor : AppTheme.textSecondary,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected
+                            ? AppTheme.primaryColor
+                            : AppTheme.textSecondary,
+                        fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
                       ),
                     ),
                   );
                 },
               ),
             ),
-          
+
           if (allMonthlyBudgets.isNotEmpty) const SizedBox(height: 16),
 
           Row(
@@ -115,36 +138,61 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.secondaryColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   icon: const Icon(Icons.calendar_month, size: 18),
-                  label: const Text('Buat Budget', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  label: const Text(
+                    'Buat Budget',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: monthlyBudget != null ? () {
+                  onPressed: monthlyBudget != null
+                      ? () {
                     showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
                       backgroundColor: Colors.transparent,
                       builder: (context) => const AddBudgetModal(),
                     );
-                  } : null,
+                  }
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Tambah Kategori', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  label: const Text(
+                    'Tambah Kategori',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
+
           const SizedBox(height: 24),
 
           if (monthlyBudget == null)
@@ -157,9 +205,19 @@ class _BudgetScreenState extends State<BudgetScreen> {
               ),
               child: const Column(
                 children: [
-                  Icon(Icons.account_balance_wallet_outlined, size: 48, color: AppTheme.textSecondary),
+                  Icon(
+                    Icons.account_balance_wallet_outlined,
+                    size: 48,
+                    color: AppTheme.textSecondary,
+                  ),
                   SizedBox(height: 16),
-                  Text('Belum ada Budget Bulanan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                    'Belum ada Budget Bulanan',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   SizedBox(height: 8),
                   Text(
                     'Buat budget bulanan terlebih dahulu untuk mulai mengatur pengeluaran Anda.',
@@ -170,7 +228,6 @@ class _BudgetScreenState extends State<BudgetScreen> {
               ),
             )
           else ...[
-            // Monthly Summary Card
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -184,16 +241,26 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Budget Bulanan', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text(
+                        'Budget Bulanan',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _buildStatusBadge(
-                            displayPercentage >= 1.0 ? 'MELEBIHI' : displayPercentage >= 0.8 ? 'PERINGATAN' : 'AMAN',
-                            displayPercentage >= 1.0 ? AppTheme.danger : displayPercentage >= 0.8 ? AppTheme.warning : AppTheme.success,
+                            displayPercentage >= 1.0
+                                ? 'MELEBIHI'
+                                : displayPercentage >= 0.8
+                                ? 'PERINGATAN'
+                                : 'AMAN',
+                            displayPercentage >= 1.0
+                                ? AppTheme.danger
+                                : displayPercentage >= 0.8
+                                ? AppTheme.warning
+                                : AppTheme.success,
                           ),
                           const SizedBox(width: 4),
-                          // Edit Monthly Budget
                           InkWell(
                             onTap: () {
                               showModalBottomSheet(
@@ -206,67 +273,106 @@ class _BudgetScreenState extends State<BudgetScreen> {
                               );
                             },
                             borderRadius: BorderRadius.circular(8),
-                            child: Padding(
-                              padding: const EdgeInsets.all(4.0),
-                              child: Icon(Icons.edit_outlined, size: 18, color: AppTheme.primaryColor),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4.0),
+                              child: Icon(
+                                Icons.edit_outlined,
+                                size: 18,
+                                color: AppTheme.primaryColor,
+                              ),
                             ),
                           ),
-                          // Delete Monthly Budget
                           InkWell(
-                            onTap: () => _confirmDeleteMonthlyBudget(context, financeData, monthlyBudget),
+                            onTap: () => _confirmDeleteMonthlyBudget(
+                              context,
+                              financeData,
+                              monthlyBudget,
+                            ),
                             borderRadius: BorderRadius.circular(8),
-                            child: Padding(
-                              padding: const EdgeInsets.all(4.0),
-                              child: Icon(Icons.delete_outline, size: 18, color: AppTheme.danger),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4.0),
+                              child: Icon(
+                                Icons.delete_outline,
+                                size: 18,
+                                color: AppTheme.danger,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 16),
+
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
                         CurrencyFormat.convertToIdr(monthlyBudget.spent),
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'dari ${CurrencyFormat.convertToIdr(displayLimit)}',
-                        style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                      Expanded(
+                        child: Text(
+                          'dari ${CurrencyFormat.convertToIdr(displayLimit)}',
+                          style: const TextStyle(
+                            color: AppTheme.textSecondary,
+                            fontSize: 14,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 12),
+
                   Text('${(displayPercentage * 100).toStringAsFixed(1)}%'),
+
                   const SizedBox(height: 8),
+
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
-                      value: displayPercentage > 1.0 ? 1.0 : displayPercentage,
+                      value:
+                      displayPercentage > 1.0 ? 1.0 : displayPercentage,
                       backgroundColor: Colors.grey.shade100,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        displayPercentage >= 1.0 ? AppTheme.danger : displayPercentage >= 0.8 ? AppTheme.warning : AppTheme.success,
+                        displayPercentage >= 1.0
+                            ? AppTheme.danger
+                            : displayPercentage >= 0.8
+                            ? AppTheme.warning
+                            : AppTheme.success,
                       ),
                       minHeight: 8,
                     ),
                   ),
+
                   const SizedBox(height: 12),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('${(displayPercentage * 100).toStringAsFixed(1)}% terpakai', style: const TextStyle(fontSize: 12)),
-                      const Text('', style: TextStyle(fontSize: 12)),
+                      Text(
+                        '${(displayPercentage * 100).toStringAsFixed(1)}% terpakai',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      const Text(
+                        '',
+                        style: TextStyle(fontSize: 12),
+                      ),
                     ],
                   ),
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             if (displayPercentage < 0.8)
               Container(
                 padding: const EdgeInsets.all(16),
@@ -276,38 +382,52 @@ class _BudgetScreenState extends State<BudgetScreen> {
                 ),
                 child: const Row(
                   children: [
-                    Text('Pengeluaranmu masih aman ya!', style: TextStyle(color: AppTheme.success, fontWeight: FontWeight.w500)),
+                    Icon(
+                      Icons.check_circle_outline,
+                      color: AppTheme.success,
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Pengeluaranmu masih aman ya!',
+                        style: TextStyle(
+                          color: AppTheme.success,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
 
             const SizedBox(height: 24),
-            
-            // Category Budgets
-            ...budgets.map((budget) => _buildBudgetCard(context, budget, financeData)),
+
+            ...budgets.map(
+                  (budget) => _buildBudgetCard(
+                context,
+                budget,
+                financeData,
+              ),
+            ),
           ],
         ],
-      ),
-      floatingActionButton: Builder(
-        builder: (context) {
-          return FloatingActionButton(
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
-            },
-            backgroundColor: AppTheme.primaryColor,
-            child: const Icon(Icons.add, color: Colors.white),
-          );
-        }
       ),
     );
   }
 
-  void _confirmDeleteMonthlyBudget(BuildContext context, FinanceProvider financeData, MonthlyBudget budget) {
+  void _confirmDeleteMonthlyBudget(
+      BuildContext context,
+      FinanceProvider financeData,
+      MonthlyBudget budget,
+      ) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Hapus Budget Bulanan'),
-        content: Text('Apakah Anda yakin ingin menghapus budget bulan ${budget.month}? Semua kategori budget di bulan ini juga akan terhapus.'),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus budget bulan ${budget.month}? Semua kategori budget di bulan ini juga akan terhapus.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -316,23 +436,39 @@ class _BudgetScreenState extends State<BudgetScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              // Show loading
+
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (_) => const Center(child: CircularProgressIndicator()),
+                builder: (_) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
               );
-              final success = await financeData.deleteMonthlyBudget(budget.id, budget.month);
+
+              final success = await financeData.deleteMonthlyBudget(
+                budget.id,
+                budget.month,
+              );
+
               if (!mounted) return;
-              Navigator.pop(context); // close loading
+
+              Navigator.pop(context);
+
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(success ? 'Budget bulanan berhasil dihapus' : 'Gagal menghapus budget bulanan'),
-                  backgroundColor: success ? AppTheme.success : AppTheme.danger,
+                  content: Text(
+                    success
+                        ? 'Budget bulanan berhasil dihapus'
+                        : 'Gagal menghapus budget bulanan',
+                  ),
+                  backgroundColor:
+                  success ? AppTheme.success : AppTheme.danger,
                 ),
               );
             },
-            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.danger,
+            ),
             child: const Text('Hapus'),
           ),
         ],
@@ -340,12 +476,18 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
-  void _confirmDeleteCategoryBudget(BuildContext context, FinanceProvider financeData, Budget budget) {
+  void _confirmDeleteCategoryBudget(
+      BuildContext context,
+      FinanceProvider financeData,
+      Budget budget,
+      ) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Hapus Budget Kategori'),
-        content: Text('Apakah Anda yakin ingin menghapus budget kategori ${budget.category}?'),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus budget kategori ${budget.category}?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -354,22 +496,39 @@ class _BudgetScreenState extends State<BudgetScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
+
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (_) => const Center(child: CircularProgressIndicator()),
+                builder: (_) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
               );
-              final success = await financeData.deleteCategoryBudget(budget.id, financeData.selectedMonth);
+
+              final success = await financeData.deleteCategoryBudget(
+                budget.id,
+                financeData.selectedMonth,
+              );
+
               if (!mounted) return;
-              Navigator.pop(context); // close loading
+
+              Navigator.pop(context);
+
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(success ? 'Budget kategori berhasil dihapus' : 'Gagal menghapus budget kategori'),
-                  backgroundColor: success ? AppTheme.success : AppTheme.danger,
+                  content: Text(
+                    success
+                        ? 'Budget kategori berhasil dihapus'
+                        : 'Gagal menghapus budget kategori',
+                  ),
+                  backgroundColor:
+                  success ? AppTheme.success : AppTheme.danger,
                 ),
               );
             },
-            style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.danger,
+            ),
             child: const Text('Hapus'),
           ),
         ],
@@ -377,10 +536,14 @@ class _BudgetScreenState extends State<BudgetScreen> {
     );
   }
 
-  Widget _buildBudgetCard(BuildContext context, Budget budget, FinanceProvider financeData) {
+  Widget _buildBudgetCard(
+      BuildContext context,
+      Budget budget,
+      FinanceProvider financeData,
+      ) {
     Color statusColor = AppTheme.success;
     String statusText = 'Aman';
-    
+
     if (budget.percentage >= 1.0) {
       statusColor = AppTheme.danger;
       statusText = 'Melebihi';
@@ -406,53 +569,95 @@ class _BudgetScreenState extends State<BudgetScreen> {
                   color: Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(_getCategoryIcon(budget.category), color: AppTheme.textPrimary, size: 20),
+                child: Icon(
+                  _getCategoryIcon(budget.category),
+                  color: AppTheme.textPrimary,
+                  size: 20,
+                ),
               ),
+
               const SizedBox(width: 12),
+
               Expanded(
-                child: Text(budget.category, style: const TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(
+                  budget.category,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              _buildStatusBadge(statusText.toUpperCase(), statusColor),
+
+              _buildStatusBadge(
+                statusText.toUpperCase(),
+                statusColor,
+              ),
+
               const SizedBox(width: 4),
-              // Edit Category Budget
+
               InkWell(
                 onTap: () {
                   showModalBottomSheet(
                     context: context,
                     isScrollControlled: true,
                     backgroundColor: Colors.transparent,
-                    builder: (context) => AddBudgetModal(budgetToEdit: budget),
+                    builder: (context) => AddBudgetModal(
+                      budgetToEdit: budget,
+                    ),
                   );
                 },
                 borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: Icon(Icons.edit_outlined, size: 18, color: AppTheme.primaryColor),
+                child: const Padding(
+                  padding: EdgeInsets.all(4.0),
+                  child: Icon(
+                    Icons.edit_outlined,
+                    size: 18,
+                    color: AppTheme.primaryColor,
+                  ),
                 ),
               ),
-              // Delete Category Budget
+
               InkWell(
-                onTap: () => _confirmDeleteCategoryBudget(context, financeData, budget),
+                onTap: () => _confirmDeleteCategoryBudget(
+                  context,
+                  financeData,
+                  budget,
+                ),
                 borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: Icon(Icons.delete_outline, size: 18, color: AppTheme.danger),
+                child: const Padding(
+                  padding: EdgeInsets.all(4.0),
+                  child: Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: AppTheme.danger,
+                  ),
                 ),
               ),
             ],
           ),
+
           const SizedBox(height: 16),
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '${CurrencyFormat.convertToIdr(budget.spent)} / ${CurrencyFormat.convertToIdr(budget.limit)}',
-                style: const TextStyle(fontSize: 14),
+              Expanded(
+                child: Text(
+                  '${CurrencyFormat.convertToIdr(budget.spent)} / ${CurrencyFormat.convertToIdr(budget.limit)}',
+                  style: const TextStyle(fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              Text('${(budget.percentage * 100).toInt()}%', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+              Text(
+                '${(budget.percentage * 100).toInt()}%',
+                style: const TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
             ],
           ),
+
           const SizedBox(height: 8),
+
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
@@ -460,17 +665,24 @@ class _BudgetScreenState extends State<BudgetScreen> {
               backgroundColor: Colors.grey.shade100,
               valueColor: AlwaysStoppedAnimation<Color>(statusColor),
               minHeight: 6,
-                ),
+            ),
           ),
+
           const SizedBox(height: 12),
+
           Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
-              Text(
-                budget.remaining >= 0 
-                  ? 'Sisa ${CurrencyFormat.convertToIdr(budget.remaining)}'
-                  : 'Lebih ${CurrencyFormat.convertToIdr(budget.spent - budget.limit)}',
-                style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              Expanded(
+                child: Text(
+                  budget.remaining >= 0
+                      ? 'Sisa ${CurrencyFormat.convertToIdr(budget.remaining)}'
+                      : 'Lebih ${CurrencyFormat.convertToIdr(budget.spent - budget.limit)}',
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                  ),
+                ),
               ),
             ],
           ),
@@ -481,7 +693,10 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
   Widget _buildStatusBadge(String text, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
@@ -492,12 +707,19 @@ class _BudgetScreenState extends State<BudgetScreen> {
           Container(
             width: 8,
             height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
           ),
           const SizedBox(width: 6),
           Text(
             text,
-            style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
@@ -506,13 +728,20 @@ class _BudgetScreenState extends State<BudgetScreen> {
 
   IconData _getCategoryIcon(String category) {
     switch (category) {
-      case 'Makanan': return Icons.restaurant;
-      case 'Transportasi': return Icons.directions_car;
-      case 'Belanja': return Icons.shopping_bag;
-      case 'Tagihan': return Icons.receipt;
-      case 'Hiburan': return Icons.videogame_asset;
-      case 'Kesehatan': return Icons.medical_services;
-      default: return Icons.category;
+      case 'Makanan':
+        return Icons.restaurant;
+      case 'Transportasi':
+        return Icons.directions_car;
+      case 'Belanja':
+        return Icons.shopping_bag;
+      case 'Tagihan':
+        return Icons.receipt;
+      case 'Hiburan':
+        return Icons.videogame_asset;
+      case 'Kesehatan':
+        return Icons.medical_services;
+      default:
+        return Icons.category;
     }
   }
 }

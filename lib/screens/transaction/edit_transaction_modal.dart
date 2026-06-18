@@ -20,7 +20,6 @@ class _EditTransactionModalState extends State<EditTransactionModal> {
   final TextEditingController _descriptionController = TextEditingController();
   late String selectedCategory;
   late DateTime selectedDate;
-  late String selectedPaymentMethod;
 
   final List<Map<String, dynamic>> incomeCategories = [
     {
@@ -59,7 +58,6 @@ class _EditTransactionModalState extends State<EditTransactionModal> {
     _amountController.text = widget.transaction.amount.toInt().toString();
     _descriptionController.text = widget.transaction.title;
     selectedDate = DateTime(widget.transaction.date.year, widget.transaction.date.month, widget.transaction.date.day, 12, 0, 0);
-    selectedPaymentMethod = widget.transaction.paymentMethod;
 
     // Normalisasi kategori dari API. Jika kategori bernilai 'pendapatan', ubah ke default 'Gaji' di UI
     selectedCategory = widget.transaction.category;
@@ -316,31 +314,6 @@ class _EditTransactionModalState extends State<EditTransactionModal> {
             ),
             const SizedBox(height: 20),
 
-            // Payment Method Selection
-            const Text('Metode Pembayaran', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: selectedPaymentMethod,
-              decoration: InputDecoration(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'Cash', child: Text('Cash')),
-                DropdownMenuItem(value: 'BCA', child: Text('BCA')),
-                DropdownMenuItem(value: 'GoPay', child: Text('GoPay')),
-                DropdownMenuItem(value: 'OVO', child: Text('OVO')),
-              ],
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    selectedPaymentMethod = val;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 32),
-
             // Save Button
             SizedBox(
               width: double.infinity,
@@ -413,7 +386,7 @@ class _EditTransactionModalState extends State<EditTransactionModal> {
       category: selectedCategory,
       date: selectedDate,
       time: widget.transaction.time,
-      paymentMethod: selectedPaymentMethod,
+      paymentMethod: '-',
     );
 
     final financeProvider = context.read<FinanceProvider>();

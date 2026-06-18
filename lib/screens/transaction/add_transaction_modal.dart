@@ -20,7 +20,6 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
   final TextEditingController _descriptionController = TextEditingController();
   String selectedCategory = 'Makanan';
   late DateTime selectedDate;
-  String selectedPaymentMethod = 'Cash';
 
   @override
   void initState() {
@@ -314,31 +313,6 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
             ),
             const SizedBox(height: 20),
 
-            // Payment Method Selection
-            const Text('Metode Pembayaran', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: selectedPaymentMethod,
-              decoration: InputDecoration(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'Cash', child: Text('Cash')),
-                DropdownMenuItem(value: 'BCA', child: Text('BCA')),
-                DropdownMenuItem(value: 'GoPay', child: Text('GoPay')),
-                DropdownMenuItem(value: 'OVO', child: Text('OVO')),
-              ],
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() {
-                    selectedPaymentMethod = val;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 32),
-
             // Save Button
             SizedBox(
               width: double.infinity,
@@ -414,7 +388,7 @@ class _AddTransactionModalState extends State<AddTransactionModal> {
       category: selectedCategory,
       date: selectedDate,
       time: timeString,
-      paymentMethod: selectedPaymentMethod,
+      paymentMethod: '-',
     );
 
     final financeProvider = context.read<FinanceProvider>();

@@ -24,12 +24,163 @@ class FinanceProvider with ChangeNotifier {
   String? _selectedMonth;
   String get selectedMonth =>
       _selectedMonth ??
-      "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+          "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+
+  double _monthlyIncome = 0;
+  double _monthlyOutcome = 0;
+  double _monthlyNet = 0;
+
+  double get monthlyIncome => _monthlyIncome;
+  double get monthlyOutcome => _monthlyOutcome;
+  double get monthlyNet => _monthlyNet;
+
+  bool _isLoadingMonthlySummary = false;
+  bool get isLoadingMonthlySummary => _isLoadingMonthlySummary;
+
+  String _monthlySummaryError = '';
+  String get monthlySummaryError => _monthlySummaryError;
+
+  String? _activeMonthlySummaryMonth;
 
   void setSelectedMonth(String month) {
     _selectedMonth = month;
     fetchBudgets(month: month);
     notifyListeners();
+  }
+
+  String _getBackendMonthName(DateTime date) {
+    const months = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+
+    return months[date.month - 1];
+  }
+
+  String _getBackendType(t.TransactionType type) {
+    return type == t.TransactionType.pemasukan ? 'income' : 'expense';
+  }
+
+  String _mapCategoryToBackend(String category) {
+    switch (category.toLowerCase()) {
+      case 'makanan':
+        return 'food';
+      case 'transportasi':
+        return 'transport';
+      case 'belanja':
+        return 'shopping';
+      case 'tagihan':
+        return 'bills';
+      case 'kesehatan':
+        return 'health';
+      case 'hiburan':
+        return 'entertainment';
+      case 'investasi':
+        return 'investment';
+      case 'lainnya':
+        return 'other';
+      case 'gaji':
+      case 'bonus':
+      case 'pendapatan':
+        return 'income';
+      default:
+        return category.toLowerCase();
+    }
+  }
+
+  double _toDoubleValue(dynamic value) {
+    if (value == null) return 0.0;
+    if (value is int) return value.toDouble();
+    if (value is double) return value;
+
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0;
+    }
+
+    return 0.0;
+  }
+
+  Future<void> fetchMonthlySummary({required String month}) async {
+    final token = await storage.read(key: 'token');
+
+    if (token == null) {
+      print('TOKEN TIDAK DITEMUKAN');
+      return;
+    }
+
+    _activeMonthlySummaryMonth = month;
+    _isLoadingMonthlySummary = true;
+    _monthlySummaryError = '';
+    notifyListeners();
+
+    try {
+      final uri = Uri.parse(
+        'http://172.24.217.180:8000/transaction/getMonthly',
+      ).replace(
+        queryParameters: {
+          'month': month,
+        },
+      );
+
+      print('MONTHLY SUMMARY URL: $uri');
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      print('MONTHLY SUMMARY STATUS: ${response.statusCode}');
+      print('MONTHLY SUMMARY BODY: ${response.body}');
+
+      final Map<String, dynamic> data = response.body.isNotEmpty
+          ? jsonDecode(response.body)
+          : {};
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final message = data['Message'] ?? data['message'] ?? {};
+
+        _monthlyIncome = _toDoubleValue(message['income']);
+        _monthlyOutcome = _toDoubleValue(message['outcome']);
+        _monthlyNet = _toDoubleValue(message['net']);
+
+        print('MONTHLY INCOME: $_monthlyIncome');
+        print('MONTHLY OUTCOME: $_monthlyOutcome');
+        print('MONTHLY NET: $_monthlyNet');
+      } else {
+        _monthlySummaryError =
+            data['Error']?.toString() ??
+                data['error']?.toString() ??
+                data['message']?.toString() ??
+                'Gagal mengambil summary bulanan';
+
+        _monthlyIncome = 0;
+        _monthlyOutcome = 0;
+        _monthlyNet = 0;
+      }
+    } catch (e) {
+      print('ERROR FETCH MONTHLY SUMMARY: $e');
+      _monthlySummaryError =
+      'Terjadi kesalahan saat mengambil summary bulanan';
+
+      _monthlyIncome = 0;
+      _monthlyOutcome = 0;
+      _monthlyNet = 0;
+    } finally {
+      _isLoadingMonthlySummary = false;
+      notifyListeners();
+    }
   }
 
   List<SavingsGoal> _savingsGoals = [];
@@ -47,82 +198,19 @@ class FinanceProvider with ChangeNotifier {
   bool _isLoadingInvestment = false;
   bool get isLoadingInvestment => _isLoadingInvestment;
 
-  List<t.Transaction> _transactions = [
-    t.Transaction(
-      id: 't1',
-      title: 'Gaji Bulanan',
-      amount: 15000000,
-      type: t.TransactionType.pemasukan,
-      category: 'Pemasukan',
-      date: DateTime.now().subtract(const Duration(days: 2)),
-      time: '08:00',
-      paymentMethod: 'BCA',
-    ),
-    t.Transaction(
-      id: 't2',
-      title: 'Belanja Groceries',
-      amount: 250000,
-      type: t.TransactionType.pengeluaran,
-      category: 'Makanan',
-      date: DateTime.now(),
-      time: '14:30',
-      paymentMethod: 'BCA',
-    ),
-    t.Transaction(
-      id: 't3',
-      title: 'Bensin Motor',
-      amount: 50000,
-      type: t.TransactionType.pengeluaran,
-      category: 'Transportasi',
-      date: DateTime.now(),
-      time: '09:15',
-      paymentMethod: 'Cash',
-    ),
-    t.Transaction(
-      id: 't4',
-      title: 'Belanja Online',
-      amount: 450000,
-      type: t.TransactionType.pengeluaran,
-      category: 'Belanja',
-      date: DateTime.now().subtract(const Duration(days: 3)),
-      time: '20:45',
-      paymentMethod: 'GoPay',
-    ),
-    t.Transaction(
-      id: 't5',
-      title: 'Pulsa & Paket Data',
-      amount: 150000,
-      type: t.TransactionType.pengeluaran,
-      category: 'Tagihan',
-      date: DateTime.now().subtract(const Duration(days: 3)),
-      time: '18:30',
-      paymentMethod: 'OVO',
-    ),
-    t.Transaction(
-      id: 't6',
-      title: 'Listrik & Air',
-      amount: 550000,
-      type: t.TransactionType.pengeluaran,
-      category: 'Tagihan',
-      date: DateTime.now().subtract(const Duration(days: 3)),
-      time: '10:00',
-      paymentMethod: 'BCA',
-    ),
-  ];
-
+  List<t.Transaction> _transactions = [];
   List<Budget> _budgets = [];
+  List<Investment> _investments = [];
 
   List<t.Transaction> get transactions {
-    // Sort transactions by date descending
     _transactions.sort((a, b) => b.date.compareTo(a.date));
     return [..._transactions];
   }
 
   List<Budget> get budgets => [..._budgets];
 
-  List<Investment> _investments = [];
-
   List<Investment> get investments => [..._investments];
+
   double get totalInvestment =>
       _investments.fold(0.0, (sum, item) => sum + item.totalValue);
 
@@ -150,20 +238,17 @@ class FinanceProvider with ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/analytics/quick'),
+        Uri.parse('http://172.24.217.180:8000/analytics/quick'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
       print('QUICK STATS STATUS: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        print('FLUTTER: raw response /analytics/quick: \${response.body}');
         final Map<String, dynamic> body = jsonDecode(response.body);
+
         if (body['success'] == true && body['data'] != null) {
           _quickStats = QuickStats.fromJson(body['data']);
-          print(
-            'FLUTTER: parsed QuickStats: monthIncome=\${_quickStats.monthIncome}, monthSpending=\${_quickStats.monthSpending}, netWorth=\${_quickStats.netWorth}',
-          );
           notifyListeners();
           print('BERHASIL LOAD QUICK STATS');
         }
@@ -183,17 +268,29 @@ class FinanceProvider with ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/transaction/'),
+        Uri.parse('http://172.24.217.180:8000/transaction/'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
       print('FETCH TRANSACTION STATUS: ${response.statusCode}');
+      print('FETCH TRANSACTION BODY: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
-        final List<dynamic> transactionsJson =
-            data['Transaction Retrieved Successfully!!'];
+        List<dynamic> transactionsJson = [];
+
+        if (data is List) {
+          transactionsJson = data;
+        } else if (data is Map<String, dynamic>) {
+          if (data['Transaction Retrieved Successfully!!'] is List) {
+            transactionsJson = data['Transaction Retrieved Successfully!!'];
+          } else if (data['Message'] is List) {
+            transactionsJson = data['Message'];
+          } else if (data['data'] is List) {
+            transactionsJson = data['data'];
+          }
+        }
 
         _transactions = transactionsJson
             .map((item) => t.Transaction.fromApiJson(item))
@@ -218,12 +315,12 @@ class FinanceProvider with ChangeNotifier {
 
     final targetMonth =
         month ??
-        "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+            "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
 
     try {
       final response = await http.get(
         Uri.parse(
-          'http://localhost:8000/budget/category/by-month/$targetMonth/all',
+          'http://172.24.217.180:8000/budget/category/by-month/$targetMonth/all',
         ),
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -234,15 +331,15 @@ class FinanceProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         final List<dynamic> data = decoded ?? [];
+
         _budgets = data.map((item) => Budget.fromApiJson(item)).toList();
+
         notifyListeners();
-        print('PARSED BUDGET COUNT: ${_budgets.length}');
         print('BERHASIL LOAD ${_budgets.length} BUDGETS');
       } else {
         print('GAGAL LOAD BUDGETS: ${response.body}');
       }
 
-      // Also fetch monthly budget
       await fetchMonthlyBudget(month: targetMonth);
     } catch (e) {
       print('ERROR BUDGET: $e');
@@ -255,18 +352,20 @@ class FinanceProvider with ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/budget/'),
+        Uri.parse('http://172.24.217.180:8000/budget/'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         final List<dynamic> data = decoded ?? [];
+
         _allMonthlyBudgets = data
             .map((item) => MonthlyBudget.fromApiJson(item))
             .toList();
-        // Sort descending by month
+
         _allMonthlyBudgets.sort((a, b) => b.month.compareTo(a.month));
+
         notifyListeners();
       }
     } catch (e) {
@@ -280,12 +379,12 @@ class FinanceProvider with ChangeNotifier {
 
     final targetMonth =
         month ??
-        "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+            "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
 
     try {
       final response = await http.get(
         Uri.parse(
-          'http://localhost:8000/budget/by-month/$targetMonth/spending',
+          'http://172.24.217.180:8000/budget/by-month/$targetMonth/spending',
         ),
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -295,11 +394,11 @@ class FinanceProvider with ChangeNotifier {
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
         _monthlyBudget = MonthlyBudget.fromApiJson(decoded);
-        notifyListeners();
       } else {
         _monthlyBudget = null;
-        notifyListeners();
       }
+
+      notifyListeners();
     } catch (e) {
       print('ERROR FETCH MONTHLY BUDGET: $e');
       _monthlyBudget = null;
@@ -313,16 +412,19 @@ class FinanceProvider with ChangeNotifier {
 
     final targetMonth =
         month ??
-        "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+            "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8000/budget/'),
+        Uri.parse('http://172.24.217.180:8000/budget/'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({'month': targetMonth, 'limit': limit}),
+        body: jsonEncode({
+          'month': targetMonth,
+          'limit': limit,
+        }),
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -330,6 +432,7 @@ class FinanceProvider with ChangeNotifier {
         setSelectedMonth(targetMonth);
         return true;
       }
+
       return false;
     } catch (e) {
       print('ERROR CREATE MONTHLY BUDGET: $e');
@@ -338,10 +441,10 @@ class FinanceProvider with ChangeNotifier {
   }
 
   Future<bool> createCategoryBudget(
-    String category,
-    double limit, {
-    String? month,
-  }) async {
+      String category,
+      double limit, {
+        String? month,
+      }) async {
     final token = await storage.read(key: 'token');
 
     if (token == null) {
@@ -357,11 +460,9 @@ class FinanceProvider with ChangeNotifier {
         'limit': limit,
         'month': targetMonth,
       });
-      print('REQUEST URL: http://localhost:8000/budget/category');
-      print('REQUEST BODY: $reqBody');
 
       final response = await http.post(
-        Uri.parse('http://localhost:8000/budget/category'),
+        Uri.parse('http://172.24.217.180:8000/budget/category'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -369,20 +470,15 @@ class FinanceProvider with ChangeNotifier {
         body: reqBody,
       );
 
-      print('RESPONSE STATUS: ${response.statusCode}');
-      print('RESPONSE BODY: ${response.body}');
-      print('BUDGET RESPONSE JSON: ${response.body}');
+      print('CREATE CATEGORY BUDGET STATUS: ${response.statusCode}');
+      print('CREATE CATEGORY BUDGET BODY: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('BUDGET CREATE SUCCESS');
-        print('BUDGET BERHASIL DITAMBAHKAN KE BACKEND');
         await fetchBudgets(month: targetMonth);
         return true;
-      } else {
-        print('BUDGET CREATE FAILED');
-        print('Gagal menambahkan budget: ${response.body}');
-        return false;
       }
+
+      return false;
     } catch (e) {
       print('ERROR CREATE BUDGET: $e');
       return false;
@@ -399,7 +495,7 @@ class FinanceProvider with ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/budget/summary'),
+        Uri.parse('http://172.24.217.180:8000/budget/summary'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -420,7 +516,7 @@ class FinanceProvider with ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/budget/all-spending'),
+        Uri.parse('http://172.24.217.180:8000/budget/all-spending'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -434,11 +530,11 @@ class FinanceProvider with ChangeNotifier {
   void addTransaction(t.Transaction transaction) {
     _transactions.add(transaction);
 
-    // Auto update budget spent if it's an expense
     if (transaction.type == t.TransactionType.pengeluaran) {
       final budgetIndex = _budgets.indexWhere(
-        (b) => b.category == transaction.category,
+            (b) => b.category == transaction.category,
       );
+
       if (budgetIndex >= 0) {
         _budgets[budgetIndex].spent += transaction.amount;
       }
@@ -455,33 +551,23 @@ class FinanceProvider with ChangeNotifier {
       return false;
     }
 
-    // Map transaction category to align with frontend parsing & backend categorizations
-    String categoryToSend = transaction.category;
-    if (transaction.type == t.TransactionType.pemasukan) {
-      // Map all income categories to "pendapatan" so that they are correctly
-      // parsed back as TransactionType.pemasukan by the frontend API parser.
-      categoryToSend = 'pendapatan';
-    }
-
     try {
-      final formattedDate =
-          '${transaction.date.year.toString().padLeft(4, '0')}-${transaction.date.month.toString().padLeft(2, '0')}-${transaction.date.day.toString().padLeft(2, '0')}T00:00:00Z';
-      print('FRONTEND SENT DATE: $formattedDate');
+      final categoryToSend = _mapCategoryToBackend(transaction.category);
+      final monthToSend = _getBackendMonthName(transaction.date);
+      final typeToSend = _getBackendType(transaction.type);
 
       final reqBody = jsonEncode({
         'amount': transaction.amount,
         'category': categoryToSend,
         'description': transaction.title,
-        'status': 'completed',
-        'date': formattedDate,
-        'type': transaction.type == t.TransactionType.pemasukan
-            ? 'income'
-            : 'outcome',
+        'month': monthToSend,
+        'type': typeToSend,
       });
-      print('REQUEST BODY: $reqBody');
+
+      print('CREATE TRANSACTION REQUEST BODY: $reqBody');
 
       final response = await http.post(
-        Uri.parse('http://localhost:8000/transaction/new'),
+        Uri.parse('http://172.24.217.180:8000/transaction/new'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -493,23 +579,21 @@ class FinanceProvider with ChangeNotifier {
       print('CREATE TRANSACTION BODY: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('TRANSAKSI BERHASIL DITAMBAHKAN KE BACKEND');
-
-        // Refresh transaction list from API
         await fetchTransactions();
 
-        // Refresh budget as well in case budget spent needs update
-        await fetchBudgets();
+        if (_activeMonthlySummaryMonth != null) {
+          await fetchMonthlySummary(month: _activeMonthlySummaryMonth!);
+        } else {
+          await fetchMonthlySummary(month: monthToSend);
+        }
 
-        // Refresh quick stats
         await fetchQuickStats();
 
         notifyListeners();
         return true;
-      } else {
-        print('Gagal menambahkan transaksi: ${response.body}');
-        return false;
       }
+
+      return false;
     } catch (e) {
       print('ERROR CREATE TRANSACTION: $e');
       return false;
@@ -524,37 +608,55 @@ class FinanceProvider with ChangeNotifier {
       return false;
     }
 
+    if (id.isEmpty) {
+      print('DELETE TRANSACTION GAGAL: ID kosong');
+      return false;
+    }
+
     try {
-      final url = 'http://localhost:8000/transaction/delete/$id';
-      print('DELETE ID: $id');
-      print('DELETE URL: $url');
+      final url = 'http://172.24.217.180:8000/transaction/delete/$id';
+
+      print('DELETE TRANSACTION ID: $id');
+      print('DELETE TRANSACTION URL: $url');
 
       final response = await http.delete(
         Uri.parse(url),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Request delete transaction timeout');
+        },
       );
 
-      print('DELETE RESPONSE: ${response.statusCode}');
+      print('DELETE TRANSACTION STATUS: ${response.statusCode}');
       print('DELETE TRANSACTION BODY: ${response.body}');
 
-      if (response.statusCode == 200) {
-        print('TRANSAKSI BERHASIL DIHAPUS DARI BACKEND');
-
-        // Refresh transaction list from API
-        await fetchTransactions();
-
-        // Refresh budget as well in case budget spent needs update
-        await fetchBudgets();
-
-        // Refresh quick stats
-        await fetchQuickStats();
-
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        _transactions.removeWhere((tx) => tx.id == id);
         notifyListeners();
+
+        Future.microtask(() async {
+          try {
+            await fetchTransactions();
+
+            if (_activeMonthlySummaryMonth != null) {
+              await fetchMonthlySummary(month: _activeMonthlySummaryMonth!);
+            }
+
+            await fetchQuickStats();
+          } catch (e) {
+            print('ERROR REFRESH AFTER DELETE TRANSACTION: $e');
+          }
+        });
+
         return true;
-      } else {
-        print('Gagal menghapus transaksi: ${response.body}');
-        return false;
       }
+
+      return false;
     } catch (e) {
       print('ERROR DELETE TRANSACTION: $e');
       return false;
@@ -569,18 +671,13 @@ class FinanceProvider with ChangeNotifier {
       return false;
     }
 
-    // Map transaction category to align with frontend parsing & backend categorizations
-    String categoryToSend = transaction.category;
-    if (transaction.type == t.TransactionType.pemasukan) {
-      categoryToSend = 'pendapatan';
-    }
-
     try {
-      final formattedDate =
-          '${transaction.date.year.toString().padLeft(4, '0')}-${transaction.date.month.toString().padLeft(2, '0')}-${transaction.date.day.toString().padLeft(2, '0')}T00:00:00Z';
-      print('UPDATE FRONTEND SENT DATE: $formattedDate');
+      final categoryToSend = _mapCategoryToBackend(transaction.category);
+      final monthToSend = _getBackendMonthName(transaction.date);
+      final typeToSend = _getBackendType(transaction.type);
+
       final response = await http.patch(
-        Uri.parse('http://localhost:8000/transaction/update/$id'),
+        Uri.parse('http://172.24.217.180:8000/transaction/update/$id'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -589,11 +686,8 @@ class FinanceProvider with ChangeNotifier {
           'amount': transaction.amount,
           'category': categoryToSend,
           'description': transaction.title,
-          'status': 'completed',
-          'date': formattedDate,
-          'type': transaction.type == t.TransactionType.pemasukan
-              ? 'income'
-              : 'outcome',
+          'month': monthToSend,
+          'type': typeToSend,
         }),
       );
 
@@ -601,23 +695,21 @@ class FinanceProvider with ChangeNotifier {
       print('UPDATE TRANSACTION BODY: ${response.body}');
 
       if (response.statusCode == 200) {
-        print('TRANSAKSI BERHASIL DIPERBAIKIN DI BACKEND');
-
-        // Refresh transaction list from API
         await fetchTransactions();
 
-        // Refresh budget as well in case budget spent needs update
-        await fetchBudgets();
+        if (_activeMonthlySummaryMonth != null) {
+          await fetchMonthlySummary(month: _activeMonthlySummaryMonth!);
+        } else {
+          await fetchMonthlySummary(month: monthToSend);
+        }
 
-        // Refresh quick stats
         await fetchQuickStats();
 
         notifyListeners();
         return true;
-      } else {
-        print('Gagal mengubah transaksi: ${response.body}');
-        return false;
       }
+
+      return false;
     } catch (e) {
       print('ERROR UPDATE TRANSACTION: $e');
       return false;
@@ -647,7 +739,7 @@ class FinanceProvider with ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/savings_goal/get'),
+        Uri.parse('http://172.24.217.180:8000/savings_goal/get'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -678,7 +770,7 @@ class FinanceProvider with ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/savings_goal/summary'),
+        Uri.parse('http://172.24.217.180:8000/savings_goal/summary'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -698,12 +790,12 @@ class FinanceProvider with ChangeNotifier {
   }
 
   Future<bool> createSavingsGoal(
-    String name,
-    String description,
-    double targetAmount,
-    DateTime targetDate,
-    String category,
-  ) async {
+      String name,
+      String description,
+      double targetAmount,
+      DateTime targetDate,
+      String category,
+      ) async {
     final token = await storage.read(key: 'token');
 
     if (token == null) {
@@ -713,7 +805,7 @@ class FinanceProvider with ChangeNotifier {
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8000/savings_goal/'),
+        Uri.parse('http://172.24.217.180:8000/savings_goal/'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -731,14 +823,12 @@ class FinanceProvider with ChangeNotifier {
       print('CREATE SAVINGS GOAL STATUS: ${response.statusCode}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('SAVINGS GOAL BERHASIL DITAMBAHKAN');
         await fetchSavingsGoals();
         await fetchSavingsGoalSummary();
         return true;
-      } else {
-        print('Gagal menambahkan savings goal: ${response.body}');
-        return false;
       }
+
+      return false;
     } catch (e) {
       print('ERROR CREATE SAVINGS GOAL: $e');
       return false;
@@ -758,18 +848,36 @@ class FinanceProvider with ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/investment/'),
+        Uri.parse('http://172.24.217.180:8000/investment/'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
       print('INVESTMENT GET STATUS: ${response.statusCode}');
+      print('INVESTMENT GET BODY: ${response.body}');
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+
+        List<dynamic> data = [];
+
+        if (decoded is List) {
+          data = decoded;
+        } else if (decoded == null) {
+          data = [];
+        } else if (decoded is Map<String, dynamic>) {
+          if (decoded['data'] is List) {
+            data = decoded['data'];
+          } else if (decoded['investments'] is List) {
+            data = decoded['investments'];
+          } else if (decoded['Investment Retrieved Successfully!!'] is List) {
+            data = decoded['Investment Retrieved Successfully!!'];
+          }
+        }
+
         _investments = data.map((item) => Investment.fromJson(item)).toList();
         print('BERHASIL LOAD ${_investments.length} INVESTMENTS');
       } else {
-        print('GAGAL LOAD INVESTMENTS: ${response.body}');
+        _investments = [];
       }
     } catch (e) {
       print('ERROR FETCH INVESTMENTS: $e');
@@ -789,7 +897,7 @@ class FinanceProvider with ChangeNotifier {
 
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/investment/summary'),
+        Uri.parse('http://172.24.217.180:8000/investment/summary'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -799,9 +907,6 @@ class FinanceProvider with ChangeNotifier {
         final Map<String, dynamic> data = jsonDecode(response.body);
         _investmentSummary = InvestmentSummary.fromJson(data);
         notifyListeners();
-        print('BERHASIL LOAD INVESTMENT SUMMARY');
-      } else {
-        print('GAGAL LOAD INVESTMENT SUMMARY: ${response.body}');
       }
     } catch (e) {
       print('ERROR FETCH INVESTMENT SUMMARY: $e');
@@ -822,11 +927,11 @@ class FinanceProvider with ChangeNotifier {
     try {
       final results = await Future.wait([
         http.get(
-          Uri.parse('http://localhost:8000/investment/'),
+          Uri.parse('http://172.24.217.180:8000/investment/'),
           headers: {'Authorization': 'Bearer $token'},
         ),
         http.get(
-          Uri.parse('http://localhost:8000/investment/summary'),
+          Uri.parse('http://172.24.217.180:8000/investment/summary'),
           headers: {'Authorization': 'Bearer $token'},
         ),
       ]);
@@ -834,23 +939,40 @@ class FinanceProvider with ChangeNotifier {
       final responseList = results[0];
       final responseSummary = results[1];
 
-      print('INVESTMENT GET STATUS: ${responseList.statusCode}');
-      print('INVESTMENT SUMMARY STATUS: ${responseSummary.statusCode}');
-
       if (responseList.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(responseList.body);
+        final decoded = jsonDecode(responseList.body);
+
+        List<dynamic> data = [];
+
+        if (decoded is List) {
+          data = decoded;
+        } else if (decoded == null) {
+          data = [];
+        } else if (decoded is Map<String, dynamic>) {
+          if (decoded['data'] is List) {
+            data = decoded['data'];
+          } else if (decoded['investments'] is List) {
+            data = decoded['investments'];
+          } else if (decoded['Investment Retrieved Successfully!!'] is List) {
+            data = decoded['Investment Retrieved Successfully!!'];
+          }
+        }
+
         _investments = data.map((item) => Investment.fromJson(item)).toList();
-        print('BERHASIL LOAD ${_investments.length} INVESTMENTS');
       } else {
-        print('GAGAL LOAD INVESTMENTS: ${responseList.body}');
+        _investments = [];
       }
 
       if (responseSummary.statusCode == 200) {
-        final Map<String, dynamic> data = jsonDecode(responseSummary.body);
-        _investmentSummary = InvestmentSummary.fromJson(data);
-        print('BERHASIL LOAD INVESTMENT SUMMARY');
+        final decodedSummary = jsonDecode(responseSummary.body);
+
+        if (decodedSummary is Map<String, dynamic>) {
+          _investmentSummary = InvestmentSummary.fromJson(decodedSummary);
+        } else {
+          _investmentSummary = InvestmentSummary.empty();
+        }
       } else {
-        print('GAGAL LOAD INVESTMENT SUMMARY: ${responseSummary.body}');
+        _investmentSummary = InvestmentSummary.empty();
       }
     } catch (e) {
       print('ERROR FETCH PORTFOLIO: $e');
@@ -861,15 +983,15 @@ class FinanceProvider with ChangeNotifier {
   }
 
   Future<bool> createInvestment(
-    String name,
-    String symbol,
-    String type,
-    double quantity,
-    double averageCost,
-    double currentPrice,
-    String exchange,
-    String selectedCurrency,
-  ) async {
+      String name,
+      String symbol,
+      String type,
+      double quantity,
+      double averageCost,
+      double currentPrice,
+      String exchange,
+      String selectedCurrency,
+      ) async {
     final token = await storage.read(key: 'token');
 
     if (token == null) {
@@ -877,13 +999,12 @@ class FinanceProvider with ChangeNotifier {
       return false;
     }
 
-    final backendType = type.toLowerCase() == 'saham'
-        ? 'stock'
-        : type.toLowerCase();
+    final backendType =
+    type.toLowerCase() == 'saham' ? 'stock' : type.toLowerCase();
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8000/investment/'),
+        Uri.parse('http://172.24.217.180:8000/investment/'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -905,14 +1026,12 @@ class FinanceProvider with ChangeNotifier {
       print('CREATE INVESTMENT BODY: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('INVESTASI BERHASIL DITAMBAHKAN');
         await fetchInvestments();
         await fetchInvestmentSummary();
         return true;
-      } else {
-        print('Gagal menambahkan investasi: ${response.body}');
-        return false;
       }
+
+      return false;
     } catch (e) {
       print('ERROR CREATE INVESTMENT: $e');
       return false;
@@ -920,13 +1039,13 @@ class FinanceProvider with ChangeNotifier {
   }
 
   Future<bool> buyInvestment(
-    String investmentId,
-    double quantity,
-    double price,
-    double fee,
-    String currency,
-    String notes,
-  ) async {
+      String investmentId,
+      double quantity,
+      double price,
+      double fee,
+      String currency,
+      String notes,
+      ) async {
     final token = await storage.read(key: 'token');
 
     if (token == null) {
@@ -936,7 +1055,7 @@ class FinanceProvider with ChangeNotifier {
 
     try {
       final response = await http.post(
-        Uri.parse('http://localhost:8000/investment/transaction'),
+        Uri.parse('http://172.24.217.180:8000/investment/transaction'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -957,13 +1076,11 @@ class FinanceProvider with ChangeNotifier {
       print('BUY INVESTMENT TRANSACTION BODY: ${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
-        print('TRANSAKSI BUY BERHASIL DITAMBAHKAN');
         await fetchPortfolio();
         return true;
-      } else {
-        print('Gagal menambahkan transaksi buy: ${response.body}');
-        return false;
       }
+
+      return false;
     } catch (e) {
       print('ERROR BUY INVESTMENT: $e');
       return false;
@@ -978,30 +1095,40 @@ class FinanceProvider with ChangeNotifier {
       return false;
     }
 
+    if (id.isEmpty) {
+      print('DELETE INVESTMENT GAGAL: ID kosong');
+      return false;
+    }
+
     try {
+      final url = 'http://172.24.217.180:8000/investment/$id';
+
       final response = await http.delete(
-        Uri.parse('http://localhost:8000/investment/$id'),
-        headers: {'Authorization': 'Bearer $token'},
+        Uri.parse(url),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
       );
 
       print('DELETE INVESTMENT STATUS: ${response.statusCode}');
+      print('DELETE INVESTMENT BODY: ${response.body}');
 
-      if (response.statusCode == 200) {
-        print('INVESTASI BERHASIL DIHAPUS');
-        await fetchInvestments();
-        await fetchInvestmentSummary();
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        _investments.removeWhere((item) => item.id == id);
+        notifyListeners();
+
+        await fetchPortfolio();
+
         return true;
-      } else {
-        print('Gagal menghapus investasi: ${response.body}');
-        return false;
       }
+
+      return false;
     } catch (e) {
       print('ERROR DELETE INVESTMENT: $e');
       return false;
     }
   }
-
-  // ==================== BUDGET CRUD ====================
 
   Future<bool> deleteMonthlyBudget(String id, String month) async {
     final token = await storage.read(key: 'token');
@@ -1009,16 +1136,15 @@ class FinanceProvider with ChangeNotifier {
 
     try {
       final response = await http.delete(
-        Uri.parse('http://localhost:8000/budget/$id'),
+        Uri.parse('http://172.24.217.180:8000/budget/$id'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
       print('DELETE MONTHLY BUDGET STATUS: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        print('MONTHLY BUDGET BERHASIL DIHAPUS');
         await fetchAllMonthlyBudgets();
-        // If the deleted month was the selected one, pick another
+
         if (_selectedMonth == month) {
           if (_allMonthlyBudgets.isNotEmpty) {
             setSelectedMonth(_allMonthlyBudgets.first.month);
@@ -1029,11 +1155,11 @@ class FinanceProvider with ChangeNotifier {
             notifyListeners();
           }
         }
+
         return true;
-      } else {
-        print('GAGAL DELETE MONTHLY BUDGET: ${response.body}');
-        return false;
       }
+
+      return false;
     } catch (e) {
       print('ERROR DELETE MONTHLY BUDGET: $e');
       return false;
@@ -1046,20 +1172,18 @@ class FinanceProvider with ChangeNotifier {
 
     try {
       final response = await http.delete(
-        Uri.parse('http://localhost:8000/budget/category/$id'),
+        Uri.parse('http://172.24.217.180:8000/budget/category/$id'),
         headers: {'Authorization': 'Bearer $token'},
       );
 
       print('DELETE CATEGORY BUDGET STATUS: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        print('CATEGORY BUDGET BERHASIL DIHAPUS');
         await fetchBudgets(month: month);
         return true;
-      } else {
-        print('GAGAL DELETE CATEGORY BUDGET: ${response.body}');
-        return false;
       }
+
+      return false;
     } catch (e) {
       print('ERROR DELETE CATEGORY BUDGET: $e');
       return false;
@@ -1067,34 +1191,34 @@ class FinanceProvider with ChangeNotifier {
   }
 
   Future<bool> updateMonthlyBudget(
-    String id,
-    double limit,
-    String month,
-  ) async {
+      String id,
+      double limit,
+      String month,
+      ) async {
     final token = await storage.read(key: 'token');
     if (token == null) return false;
 
     try {
       final response = await http.patch(
-        Uri.parse('http://localhost:8000/budget/$id'),
+        Uri.parse('http://172.24.217.180:8000/budget/$id'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({'limit': limit}),
+        body: jsonEncode({
+          'limit': limit,
+        }),
       );
 
       print('UPDATE MONTHLY BUDGET STATUS: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        print('MONTHLY BUDGET BERHASIL DIUPDATE');
         await fetchAllMonthlyBudgets();
         await fetchBudgets(month: month);
         return true;
-      } else {
-        print('GAGAL UPDATE MONTHLY BUDGET: ${response.body}');
-        return false;
       }
+
+      return false;
     } catch (e) {
       print('ERROR UPDATE MONTHLY BUDGET: $e');
       return false;
@@ -1102,17 +1226,17 @@ class FinanceProvider with ChangeNotifier {
   }
 
   Future<bool> updateCategoryBudget(
-    String id,
-    String category,
-    double limit,
-    String month,
-  ) async {
+      String id,
+      String category,
+      double limit,
+      String month,
+      ) async {
     final token = await storage.read(key: 'token');
     if (token == null) return false;
 
     try {
       final response = await http.patch(
-        Uri.parse('http://localhost:8000/budget/category/$id'),
+        Uri.parse('http://172.24.217.180:8000/budget/category/$id'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -1127,13 +1251,11 @@ class FinanceProvider with ChangeNotifier {
       print('UPDATE CATEGORY BUDGET STATUS: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        print('CATEGORY BUDGET BERHASIL DIUPDATE');
         await fetchBudgets(month: month);
         return true;
-      } else {
-        print('GAGAL UPDATE CATEGORY BUDGET: ${response.body}');
-        return false;
       }
+
+      return false;
     } catch (e) {
       print('ERROR UPDATE CATEGORY BUDGET: $e');
       return false;
